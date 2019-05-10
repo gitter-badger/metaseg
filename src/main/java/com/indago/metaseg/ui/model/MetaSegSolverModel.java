@@ -44,7 +44,7 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 	private final MetaSegCostPredictionTrainerModel costModel;
 
 	private BdvHandlePanel bdvHandlePanel;
-	private final List< RandomAccessibleInterval< IntType > > imgs = new ArrayList<>();;
+	private final List< RandomAccessibleInterval< IntType > > imgs = new ArrayList<>();
 	private final List< BdvSource > bdvSources = new ArrayList<>();
 	private final List< BdvOverlay > overlays = new ArrayList<>();
 	private final List< BdvSource > bdvOverlaySources = new ArrayList<>();

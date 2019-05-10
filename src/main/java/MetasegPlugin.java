@@ -47,7 +47,7 @@ public class MetasegPlugin implements Command {
 			}
 		}
 		else
-			log.warn( "Abort start of Tr2d, because Gurobi is not working properly." );
+			log.warn( "Abort start of MetaSeg, because Gurobi is not working properly." );
 	}
 
 	private void showGurobiErrorMessage( final NoClassDefFoundError err )
