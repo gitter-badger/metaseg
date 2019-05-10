@@ -129,7 +129,7 @@ public class MetaSegApplication {
 		checkGurobiAvailability();
 		parseCommandLineArgs( args );
 
-		guiFrame = new JFrame( "tr2d" );
+		guiFrame = new JFrame( "MetaSeg" );
 		if ( isStandalone ) setImageAppIcon();
 
 		MetaSegContext.segPlugins = segPlugins;

@@ -53,6 +53,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private ArrayList< LabelingSegment > manualTrainHypotheses;
 	private ArrayList< Integer > manualTrainHypothesesTimeIndices;
 	private ArrayList< Integer > alreadyDisplayedHypotheses;
+	private int maxHypothesisSize = 32; // gets set to more sensible value in constructor
+	private int minHypothesisSize = 16;
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
@@ -63,6 +65,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public LabelingFrames getLabelings() {
 		if ( this.labelingFrames == null ) {
 			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
+			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
+			labelingFrames.setMinSegmentSize( minHypothesisSize );
 			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
 			labelingFrames.processFrames();
 		}
@@ -236,5 +240,21 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		bdvHandlePanel.getViewerPanel().setTimepoint( manualTrainHypothesesTimeIndices.get( hypothesisCount ) );
 		bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
 
+	}
+
+	public void setMaxPixelComponentSize( int maxValue ) {
+		maxHypothesisSize = maxValue;
+	}
+
+	public void setMinPixelComponentSize( int minValue ) {
+		minHypothesisSize = minValue;
+	}
+
+	public int getMaxPixelComponentSize() {
+		return maxHypothesisSize;
+	}
+
+	public int getMinPixelComponentSize() {
+		return minHypothesisSize;
 	}
 }

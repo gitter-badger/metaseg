@@ -10,7 +10,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
@@ -34,15 +36,13 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JSplitPane splitPane;
 	private JButton btnFetch;
 	private JButton btnRandCosts;
-	private JButton btnFetchTrain;
+	private JButton btnPrepareTrainData;
 
 	private JButton btnManClassification;
 
 	private JTextField txtMaxPixelComponentSize;
 
 	private JTextField txtMinPixelComponentSize;
-
-	private JButton bFetch;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -51,34 +51,61 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	}
 
 	private void buildGui() {
-		final JPanel panel = new JPanel( new BorderLayout() );
+		final JPanel viewer = new JPanel( new BorderLayout() );
 
 		model.bdvSetHandlePanel(
 				new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
 						.options()
 						.is2D() ) );
 
-		panel.add( model.bdvGetHandlePanel().getViewerPanel(), BorderLayout.CENTER );
+		viewer.add( model.bdvGetHandlePanel().getViewerPanel(), BorderLayout.CENTER );
 		model.populateBdv();
 
 		final MigLayout layout = new MigLayout( "", "[][grow]", "" );
 		final JPanel controls = new JPanel( layout );
 
+		final JPanel panelFetch = new JPanel( new MigLayout() );
+		panelFetch.setBorder( BorderFactory.createTitledBorder( "segmentation fetching" ) );
+
+		txtMaxPixelComponentSize = new JTextField( 5 );
+		txtMaxPixelComponentSize.addActionListener( this );
+		txtMaxPixelComponentSize.addFocusListener( this );
+		txtMinPixelComponentSize = new JTextField( 5 );
+		txtMinPixelComponentSize.addActionListener( this );
+		txtMinPixelComponentSize.addFocusListener( this );
+
 		btnFetch = new JButton( "fetch segments" );
 		btnFetch.addActionListener( this );
-		btnRandCosts = new JButton( "set random costs" );
-		btnRandCosts.addActionListener( this );
-		btnFetchTrain = new JButton( "fetch training data" );
-		btnFetchTrain.addActionListener( this );
+
+		panelFetch.add( new JLabel( "Max segment size:" ), "growx" );
+		panelFetch.add( txtMaxPixelComponentSize, "growx, wrap" );
+		panelFetch.add( new JLabel( "Min segment size:" ), "growx" );
+		panelFetch.add( txtMinPixelComponentSize, "growx, wrap" );
+		panelFetch.add( btnFetch, "growx, wrap" );
+
+		final JPanel panelManClassify = new JPanel( new MigLayout() );
+		panelManClassify.setBorder( BorderFactory.createTitledBorder( "train data creation" ) );
+		btnPrepareTrainData = new JButton( "prepare training data" );
+		btnPrepareTrainData.addActionListener( this );
 		btnManClassification = new JButton( "show for classification" );
 		btnManClassification.addActionListener( this );
 
-		controls.add( btnFetch, "span, growx, wrap" );
-		controls.add( btnRandCosts, "span, growx, wrap" );
-		controls.add( btnFetchTrain, "span, growx, wrap" );
-		controls.add( btnManClassification, "span, growx, wrap" );
+		panelManClassify.add( btnPrepareTrainData, "growx, wrap" );
+		panelManClassify.add( btnManClassification, "growx, wrap" );
 
-		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, panel );
+		final JPanel panelTraining = new JPanel( new MigLayout() );
+		panelTraining.setBorder( BorderFactory.createTitledBorder( "training" ) );
+
+		btnRandCosts = new JButton( "set random costs" );
+		btnRandCosts.addActionListener( this );
+
+		panelTraining.add( btnRandCosts, "growx, wrap" );
+
+		controls.add( panelFetch, "growx, wrap" );
+		controls.add( panelManClassify, "growx, wrap" );
+		controls.add( panelTraining, "growx, wrap" );
+
+		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
 		this.add( splitPane, BorderLayout.CENTER );
 	}
@@ -93,7 +120,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		} else
 		if (e.getSource().equals( btnRandCosts )) {
 			actionSetRandomCosts();
-		} else if ( e.getSource().equals( btnFetchTrain ) ) {
+		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
 			actionFetchTrain();
 		} else if ( e.getSource().equals( btnManClassification ) ) {
 			actionShowTrainSegment();
@@ -103,8 +130,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private void actionShowTrainSegment() {
 		MetaSegLog.log.info( "Running manual classification routine..." );
 		model.showTrainSegment();
-//		model.populateTrainingBdv();
-
 	}
 
 	private void actionFetchTrain() {
@@ -114,6 +139,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void actionFetch() {
 		MetaSegLog.log.info( "Fetching segmentation results..." );
+		parseAndSetParametersInModel();
 		model.getLabelings();
 		model.getConflictGraphs();
 		model.getConflictCliques();
@@ -126,14 +152,36 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	}
 
 	@Override
-	public void focusGained( FocusEvent e ) {
-		// TODO Auto-generated method stub
-
-	}
+	public void focusGained( FocusEvent e ) {}
 
 	@Override
 	public void focusLost( FocusEvent e ) {
-		// TODO Auto-generated method stub
+		if ( e.getSource().equals( txtMaxPixelComponentSize ) || e.getSource().equals( txtMinPixelComponentSize ) ) {
+			parseAndSetParametersInModel();
+//				model.saveStateToFile();
+		}
+
+	}
+
+	private void parseAndSetParametersInModel() {
+		try {
+			if ( txtMaxPixelComponentSize.getText().trim().isEmpty() ) {
+				model.setMaxPixelComponentSize( Integer.MAX_VALUE );
+			} else {
+				model.setMaxPixelComponentSize( Integer.parseInt( txtMaxPixelComponentSize.getText() ) );
+			}
+		} catch ( final NumberFormatException e ) {
+			txtMaxPixelComponentSize.setText( "" + model.getMaxPixelComponentSize() );
+		}
+		try {
+			if ( txtMinPixelComponentSize.getText().trim().isEmpty() ) {
+				model.setMinPixelComponentSize( model.getMinPixelComponentSize() );
+			} else {
+				model.setMinPixelComponentSize( Integer.parseInt( txtMinPixelComponentSize.getText() ) );
+			}
+		} catch ( final NumberFormatException e ) {
+			txtMinPixelComponentSize.setText( "" + model.getMinPixelComponentSize() );
+		}
 
 	}
 }
