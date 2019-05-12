@@ -4,7 +4,7 @@
 package com.indago.metaseg.ui.model;
 
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -12,6 +12,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
+import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 
 import com.indago.costs.CostFactory;
 import com.indago.costs.CostParams;
@@ -38,7 +45,7 @@ import net.imglib2.view.Views;
 /**
  * @author jug
  */
-public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingSegment >, BdvWithOverlaysOwner, ActionListener {
+public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingSegment >, BdvWithOverlaysOwner {
 
 	private final MetaSegModel parentModel;
 	private LabelingFrames labelingFrames;
@@ -53,6 +60,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private ArrayList< LabelingSegment > manualTrainHypotheses;
 	private ArrayList< Integer > manualTrainHypothesesTimeIndices;
 	private ArrayList< Integer > alreadyDisplayedHypotheses;
+	private ArrayList< LabelingSegment > goodHypotheses;
+	private ArrayList< LabelingSegment > badHypotheses;
 	private int maxHypothesisSize = 32; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 16;
 
@@ -168,6 +177,37 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return this.overlays;
 	}
 
+	public void installBehaviour( LabelingSegment labelingSegment ) {
+		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_Y, 0 ), "Yes", new AbstractAction() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				goodHypotheses.add( labelingSegment );
+				MetaSegLog.log.info( "Added as good segment!" );
+			}
+
+		} );
+
+		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_N, 0 ), "No", new AbstractAction() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				badHypotheses.add( labelingSegment );
+				MetaSegLog.log.info( "Added as bad segment!" );
+			}
+
+		} );
+	};
+
+	public void registerKeyBinding( KeyStroke keyStroke, String name, Action action ) {
+
+		InputMap im = bdvHandlePanel.getViewerPanel().getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW );
+		ActionMap am = bdvHandlePanel.getViewerPanel().getActionMap();
+
+		im.put( keyStroke, name );
+		am.put( name, action );
+	}
+
 	public void populateBdv() {
 		bdvRemoveAll();
 		bdvRemoveAllOverlays();
@@ -188,20 +228,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		List< List< LabelingSegment > > allSegs = labelingFrames.getSegments();
 		for ( int dispHyp = 0; dispHyp < maxNumberOfDisplayHypotheses; dispHyp++ ) {
 			Random rand = new Random();
-			int ele = rand.nextInt( ( int ) parentModel.getNumberOfFrames() );
-			List< LabelingSegment > timeSegs = allSegs.get(ele);
+			int randTime = rand.nextInt( ( int ) parentModel.getNumberOfFrames() );
+			List< LabelingSegment > timeSegs = allSegs.get(randTime);
 			Random rand2 = new Random();
-			manualTrainHypotheses.add( timeSegs.get( rand2.nextInt( timeSegs.size() ) ) );
-			manualTrainHypothesesTimeIndices.add(  ele );
+			int randSeg = rand2.nextInt( timeSegs.size() );
+			manualTrainHypotheses.add( timeSegs.get( randSeg ) );
+			manualTrainHypothesesTimeIndices.add( randTime );
+			allSegs.get( randTime ).remove( randSeg );
 		}
 		
 		alreadyDisplayedHypotheses = new ArrayList< Integer >( Collections.nCopies( manualTrainHypotheses.size(), 0 ) );
-	}
-
-	@Override
-	public void actionPerformed( ActionEvent e ) {
-		// TODO Auto-generated method stub
-
+		goodHypotheses = new ArrayList< LabelingSegment >();
+		badHypotheses = new ArrayList< LabelingSegment >();
 	}
 
 	public void showTrainSegment() {
@@ -239,7 +277,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		bdvHandlePanel.getViewerPanel().setTimepoint( manualTrainHypothesesTimeIndices.get( hypothesisCount ) );
 		bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
-
+		installBehaviour( manualTrainHypotheses.get( hypothesisCount ) );
+		
 	}
 
 	public void setMaxPixelComponentSize( int maxValue ) {
