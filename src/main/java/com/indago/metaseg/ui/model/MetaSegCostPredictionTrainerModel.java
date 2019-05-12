@@ -73,13 +73,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public LabelingFrames getLabelings() {
-		if ( this.labelingFrames == null ) {
-			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
-			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
-			labelingFrames.setMinSegmentSize( minHypothesisSize );
-			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
-			labelingFrames.processFrames();
-		}
+		labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
+		labelingFrames.setMaxSegmentSize( maxHypothesisSize );
+		labelingFrames.setMinSegmentSize( minHypothesisSize );
+		MetaSegLog.log.info( "...processing LabelFrame inputs..." );
+		labelingFrames.processFrames();
 		return labelingFrames;
 	}
 
@@ -224,7 +222,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public void getRandomlySelectedSegmentHypotheses() {
-		int maxNumberOfDisplayHypotheses = 100; //TODO select this number more sensibly, maybe expose as parameter
+		int maxNumberOfDisplayHypotheses = 5; //TODO select this number more sensibly, maybe expose as parameter
 		manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
 		manualTrainHypotheses = new ArrayList< LabelingSegment >();
 		
@@ -264,7 +262,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		for(int iter = 0; iter< alreadyDisplayedHypotheses.size(); iter++) {
 			if(alreadyDisplayedHypotheses.get( iter ) == 0) {
 				hypothesisCount = iter;
-				System.out.println( hypothesisCount );
 				alreadyDisplayedHypotheses.set( iter, 1 );
 				break;
 			}
