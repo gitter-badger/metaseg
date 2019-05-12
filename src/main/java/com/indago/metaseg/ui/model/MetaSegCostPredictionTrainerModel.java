@@ -18,6 +18,7 @@ import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
+import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
 import com.indago.costs.CostFactory;
@@ -62,7 +63,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private ArrayList< Integer > alreadyDisplayedHypotheses;
 	private ArrayList< LabelingSegment > goodHypotheses;
 	private ArrayList< LabelingSegment > badHypotheses;
-	private int maxHypothesisSize = 32; // gets set to more sensible value in constructor
+	private int maxHypothesisSize = 1000; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 16;
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -184,6 +185,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 				goodHypotheses.add( labelingSegment );
 				MetaSegLog.log.info( "Added as good segment!" );
+				showTrainSegment();
 			}
 
 		} );
@@ -194,6 +196,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 				badHypotheses.add( labelingSegment );
 				MetaSegLog.log.info( "Added as bad segment!" );
+				showTrainSegment();
 			}
 
 		} );
@@ -221,7 +224,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public void getRandomlySelectedSegmentHypotheses() {
-		int maxNumberOfDisplayHypotheses = 100;
+		int maxNumberOfDisplayHypotheses = 100; //TODO select this number more sensibly, maybe expose as parameter
 		manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
 		manualTrainHypotheses = new ArrayList< LabelingSegment >();
 		
@@ -240,6 +243,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		alreadyDisplayedHypotheses = new ArrayList< Integer >( Collections.nCopies( manualTrainHypotheses.size(), 0 ) );
 		goodHypotheses = new ArrayList< LabelingSegment >();
 		badHypotheses = new ArrayList< LabelingSegment >();
+		JOptionPane
+				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
+		showTrainSegment();
 	}
 
 	public void showTrainSegment() {
@@ -251,33 +257,40 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		overlays.clear();
 
 		bdvAdd( parentModel.getRawData(), "RAW" );
-		int hypothesisCount = -1;
+		int hypothesisCount = alreadyDisplayedHypotheses.size(); //The hypotheses being displayed will never equal this
 		final int c = 1;
 		final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
 
 		for(int iter = 0; iter< alreadyDisplayedHypotheses.size(); iter++) {
 			if(alreadyDisplayedHypotheses.get( iter ) == 0) {
 				hypothesisCount = iter;
+				System.out.println( hypothesisCount );
 				alreadyDisplayedHypotheses.set( iter, 1 );
 				break;
 			}
 				
 		}
-		IterableRegion< ? > region = manualTrainHypotheses.get( hypothesisCount ).getRegion();
-		IntervalView< IntType > retSlice =
-				Views.hyperSlice(
-						hypothesisImage,
-						parentModel.getTimeDimensionIndex(),
-						manualTrainHypothesesTimeIndices.get( hypothesisCount ) );
-		try {
-			Regions.sample( region, retSlice ).forEach( t -> t.set( c ) );
-
-		} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
-			MetaSegLog.log.error( aiaob );
+		if ( hypothesisCount == alreadyDisplayedHypotheses.size() ) {
+			JOptionPane.showMessageDialog( null, "Finished classifying all hypotheses..." );
+			return;
 		}
-		bdvHandlePanel.getViewerPanel().setTimepoint( manualTrainHypothesesTimeIndices.get( hypothesisCount ) );
-		bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
-		installBehaviour( manualTrainHypotheses.get( hypothesisCount ) );
+		else {
+			IterableRegion< ? > region = manualTrainHypotheses.get( hypothesisCount ).getRegion();
+			IntervalView< IntType > retSlice =
+					Views.hyperSlice(
+							hypothesisImage,
+							parentModel.getTimeDimensionIndex(),
+							manualTrainHypothesesTimeIndices.get( hypothesisCount ) );
+			try {
+				Regions.sample( region, retSlice ).forEach( t -> t.set( c ) );
+
+			} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
+				MetaSegLog.log.error( aiaob );
+			}
+			bdvHandlePanel.getViewerPanel().setTimepoint( manualTrainHypothesesTimeIndices.get( hypothesisCount ) );
+			bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
+			installBehaviour( manualTrainHypotheses.get( hypothesisCount ) );
+		}
 		
 	}
 

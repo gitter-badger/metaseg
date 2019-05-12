@@ -38,8 +38,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JButton btnRandCosts;
 	private JButton btnPrepareTrainData;
 
-	private JButton btnManClassification;
-
 	private JTextField txtMaxPixelComponentSize;
 
 	private JTextField txtMinPixelComponentSize;
@@ -68,9 +66,11 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelFetch.setBorder( BorderFactory.createTitledBorder( "segmentation fetching" ) );
 
 		txtMaxPixelComponentSize = new JTextField( 5 );
+		txtMaxPixelComponentSize.setText( Integer.toString( model.getMaxPixelComponentSize() ) ); //TODO Needs changing later to image size -1
 		txtMaxPixelComponentSize.addActionListener( this );
 		txtMaxPixelComponentSize.addFocusListener( this );
 		txtMinPixelComponentSize = new JTextField( 5 );
+		txtMinPixelComponentSize.setText( Integer.toString( model.getMinPixelComponentSize() ) );
 		txtMinPixelComponentSize.addActionListener( this );
 		txtMinPixelComponentSize.addFocusListener( this );
 
@@ -87,11 +87,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelManClassify.setBorder( BorderFactory.createTitledBorder( "train data creation" ) );
 		btnPrepareTrainData = new JButton( "prepare training data" );
 		btnPrepareTrainData.addActionListener( this );
-		btnManClassification = new JButton( "show for classification" );
-		btnManClassification.addActionListener( this );
 
 		panelManClassify.add( btnPrepareTrainData, "growx, wrap" );
-		panelManClassify.add( btnManClassification, "growx, wrap" );
 
 		final JPanel panelTraining = new JPanel( new MigLayout() );
 		panelTraining.setBorder( BorderFactory.createTitledBorder( "training" ) );
@@ -122,14 +119,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			actionSetRandomCosts();
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
 			actionFetchTrain();
-		} else if ( e.getSource().equals( btnManClassification ) ) {
-			actionShowTrainSegment();
 		}
-	}
-
-	private void actionShowTrainSegment() {
-		MetaSegLog.log.info( "Running manual classification routine..." );
-		model.showTrainSegment();
 	}
 
 	private void actionFetchTrain() {
