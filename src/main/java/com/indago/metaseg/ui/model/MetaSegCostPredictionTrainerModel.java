@@ -28,6 +28,7 @@ import com.indago.data.segmentation.LabelingSegment;
 import com.indago.io.DataMover;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.data.LabelingFrames;
+import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
 import com.indago.ui.bdv.BdvWithOverlaysOwner;
 
 import bdv.util.BdvHandlePanel;
@@ -65,6 +66,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private ArrayList< LabelingSegment > badHypotheses;
 	private int maxHypothesisSize = 1000; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 16;
+	private MetaSegRandomForestClassifier rf;
+
+
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
@@ -305,5 +309,31 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public int getMinPixelComponentSize() {
 		return minHypothesisSize;
+	}
+
+	public void startTrainingPhase() throws Exception {
+		if ( !( goodHypotheses.isEmpty() ) && !( badHypotheses.isEmpty() ) ) {
+			extractFeatures();
+		} else if ( goodHypotheses.isEmpty() ) {
+			JOptionPane
+					.showMessageDialog( null, "No good segmentation instances were selected during classification, continue training?..." ); //TODO make it yes, no pane
+		} else if ( badHypotheses.isEmpty() ) {
+			JOptionPane
+					.showMessageDialog( null, "No bad segmentation instances were selected during classification, continue training?..." ); //TODO make it yes, no pane
+		}
+	}
+
+	private void extractFeatures() throws Exception {
+
+		rf = new MetaSegRandomForestClassifier();
+		rf.buildRandomForest();
+		rf.initializeTrainingData( goodHypotheses, badHypotheses );
+		rf.train();
+
+
+	}
+
+	public void setPredictedCosts() {
+		costs = rf.predict( labelingFrames );
 	}
 }
