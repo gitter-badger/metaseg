@@ -29,7 +29,7 @@ import com.indago.io.DataMover;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.data.LabelingFrames;
 import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
-import com.indago.ui.bdv.BdvWithOverlaysOwner;
+import com.indago.ui.bdv.BdvOwner;
 
 import bdv.util.BdvHandlePanel;
 import bdv.util.BdvOverlay;
@@ -41,13 +41,14 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 /**
  * @author jug
  */
-public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingSegment >, BdvWithOverlaysOwner {
+public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingSegment >, BdvOwner {
 
 	private final MetaSegModel parentModel;
 	private LabelingFrames labelingFrames;
@@ -77,11 +78,15 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public LabelingFrames getLabelings() {
-		labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
-		labelingFrames.setMaxSegmentSize( maxHypothesisSize );
-		labelingFrames.setMinSegmentSize( minHypothesisSize );
-		MetaSegLog.log.info( "...processing LabelFrame inputs..." );
-		labelingFrames.processFrames();
+		if ( this.labelingFrames == null ) {
+			System.out.println( "Entered!" );
+			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
+			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
+			labelingFrames.setMinSegmentSize( minHypothesisSize );
+			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
+			labelingFrames.processFrames();
+		}
+
 		return labelingFrames;
 	}
 
@@ -163,23 +168,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return this.bdvSources;
 	}
 
-	@Override
-	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
-		final int idx = imgs.indexOf( img );
-		if ( idx == -1 ) return null;
-		return bdvGetSources().get( idx );
-	}
-
-	@Override
-	public List< BdvSource > bdvGetOverlaySources() {
-		return this.bdvOverlaySources;
-	}
-
-	@Override
-	public List< BdvOverlay > bdvGetOverlays() {
-		return this.overlays;
-	}
-
 	public void installBehaviour( LabelingSegment labelingSegment ) {
 		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_Y, 0 ), "Yes", new AbstractAction() {
 
@@ -202,6 +190,17 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			}
 
 		} );
+
+		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_Q, 0 ), "Quit", new AbstractAction() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+
+				MetaSegLog.log.info( "Quitting classifying hypotheses..." );
+				showTrainSegment();
+			}
+
+		} );
 	};
 
 	public void registerKeyBinding( KeyStroke keyStroke, String name, Action action ) {
@@ -215,7 +214,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public void populateBdv() {
 		bdvRemoveAll();
-		bdvRemoveAllOverlays();
 
 		imgs.clear();
 		overlays.clear();
@@ -226,20 +224,27 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public void getRandomlySelectedSegmentHypotheses() {
-		int maxNumberOfDisplayHypotheses = 5; //TODO select this number more sensibly, maybe expose as parameter
+		int maxNumberOfDisplayHypotheses = 6; //TODO select this number more sensibly, maybe expose as parameter
 		manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
 		manualTrainHypotheses = new ArrayList< LabelingSegment >();
 		
-		List< List< LabelingSegment > > allSegs = labelingFrames.getSegments();
+		List< List< LabelingSegment > > allSegsAllTime = new ArrayList< List< LabelingSegment > >( labelingFrames.getSegments() );
+		List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = new ArrayList<>();
+
+		for ( int time = 0; time < allSegsAllTime.size(); time++ ) {
+			for ( LabelingSegment ls : allSegsAllTime.get( time ) ) {
+				segsWithIdAndTime.add( new ValuePair< LabelingSegment, Integer >( ls, time ) );
+			}
+		}
+
 		for ( int dispHyp = 0; dispHyp < maxNumberOfDisplayHypotheses; dispHyp++ ) {
+
 			Random rand = new Random();
-			int randTime = rand.nextInt( ( int ) parentModel.getNumberOfFrames() );
-			List< LabelingSegment > timeSegs = allSegs.get(randTime);
-			Random rand2 = new Random();
-			int randSeg = rand2.nextInt( timeSegs.size() );
-			manualTrainHypotheses.add( timeSegs.get( randSeg ) );
-			manualTrainHypothesesTimeIndices.add( randTime );
-			allSegs.get( randTime ).remove( randSeg );
+			System.out.println( segsWithIdAndTime.size() );
+			int randId = rand.nextInt( segsWithIdAndTime.size() );
+			manualTrainHypotheses.add( segsWithIdAndTime.get( randId ).getA() );
+			manualTrainHypothesesTimeIndices.add( segsWithIdAndTime.get( randId ).getB() );
+			segsWithIdAndTime.remove( randId );
 		}
 		
 		alreadyDisplayedHypotheses = new ArrayList< Integer >( Collections.nCopies( manualTrainHypotheses.size(), 0 ) );
@@ -253,10 +258,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public void showTrainSegment() {
 
 		bdvRemoveAll();
-		bdvRemoveAllOverlays();
-
-		imgs.clear();
-		overlays.clear();
 
 		bdvAdd( parentModel.getRawData(), "RAW" );
 		int hypothesisCount = alreadyDisplayedHypotheses.size(); //The hypotheses being displayed will never equal this
@@ -335,5 +336,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public void setPredictedCosts() {
 		costs = rf.predict( labelingFrames );
+	}
+
+	@Override
+	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
