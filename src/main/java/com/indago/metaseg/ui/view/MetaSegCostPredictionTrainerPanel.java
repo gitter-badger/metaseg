@@ -11,9 +11,11 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
@@ -45,6 +47,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JButton btnStartTrain;
 
 	private JButton btnPredCosts;
+
+	private ButtonGroup trainingModeButtons;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -89,16 +93,38 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		final JPanel panelManClassifyAndTrain = new JPanel( new MigLayout() );
 		panelManClassifyAndTrain.setBorder( BorderFactory.createTitledBorder( "training" ) );
+
+		trainingModeButtons = new ButtonGroup();
+		JRadioButton btnSupervised = new JRadioButton( "supervised" );
+		btnSupervised.addActionListener( new ActionListener() {
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setActiveLearningMode( false );
+			}
+		} );
+		JRadioButton btnActiveLearning = new JRadioButton( "active learning" );
+		btnActiveLearning.addActionListener( new ActionListener() {
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setActiveLearningMode( true );
+			}
+		} );
+		trainingModeButtons.add( btnSupervised );
+		trainingModeButtons.add( btnActiveLearning );
+		btnActiveLearning.doClick();
+
 		btnPrepareTrainData = new JButton( "prepare training data" );
 		btnPrepareTrainData.addActionListener( this );
 		btnStartTrain = new JButton( "start training" );
 		btnStartTrain.addActionListener( this );
 
+		panelManClassifyAndTrain.add( btnSupervised, "growx, wrap" );
+		panelManClassifyAndTrain.add( btnActiveLearning, "growx, wrap" );
 		panelManClassifyAndTrain.add( btnPrepareTrainData, "growx, wrap" );
 		panelManClassifyAndTrain.add( btnStartTrain, "growx, wrap" );
 
-		final JPanel panelTraining = new JPanel( new MigLayout() );
-		panelTraining.setBorder( BorderFactory.createTitledBorder( "training" ) );
+		final JPanel panelCostPrediction = new JPanel( new MigLayout() );
+		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "cost prediction" ) );
 
 		btnRandCosts = new JButton( "set random costs" );
 		btnRandCosts.addActionListener( this );
@@ -106,12 +132,12 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		btnPredCosts = new JButton( "set predicted costs" );
 		btnPredCosts.addActionListener( this );
 
-		panelTraining.add( btnPredCosts, "growx, wrap" );
-		panelTraining.add( btnRandCosts, "growx, wrap" );
+		panelCostPrediction.add( btnPredCosts, "growx, wrap" );
+		panelCostPrediction.add( btnRandCosts, "growx, wrap" );
 
 		controls.add( panelFetch, "growx, wrap" );
 		controls.add( panelManClassifyAndTrain, "growx, wrap" );
-		controls.add( panelTraining, "growx, wrap" );
+		controls.add( panelCostPrediction, "growx, wrap" );
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
@@ -134,7 +160,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			try {
 				actionStartTrain();
 			} catch ( Exception e1 ) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 		} else if ( e.getSource().equals( btnPredCosts ) ) {
@@ -155,6 +180,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void actionFetchForManualClassify() {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
+		model.setQuit( false );
 		model.getRandomlySelectedSegmentHypotheses();
 	}
 
@@ -206,4 +232,5 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		}
 
 	}
+
 }
