@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.scijava.Context;
 
@@ -15,6 +16,7 @@ import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.roi.geom.real.Polygon2D;
+import weka.classifiers.Evaluation;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instances;
@@ -42,12 +44,15 @@ public class MetaSegRandomForestClassifier {
 
 	public void initializeTrainingData( ArrayList< LabelingSegment > goodHypotheses, ArrayList< LabelingSegment > badHypotheses ) {
 		trainingData = newTable();
+//		int relative_weight_bad = goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
+		int relative_weight_bad = 1;
+
 		for ( int i = 0; i < goodHypotheses.size(); i++ ) {
-			DenseInstance ins = extractFeaturesFromHypotheses( goodHypotheses.get( i ), 1 );
+			DenseInstance ins = extractFeaturesFromHypotheses( goodHypotheses.get( i ), 1, 1 );
 			trainingData.add( ins );
 		}
 		for ( int i = 0; i < badHypotheses.size(); i++ ) {
-			DenseInstance ins = extractFeaturesFromHypotheses( badHypotheses.get( i ), 0 );
+			DenseInstance ins = extractFeaturesFromHypotheses( badHypotheses.get( i ), relative_weight_bad, 0 );
 			trainingData.add( ins );
 		}
 
@@ -61,21 +66,28 @@ public class MetaSegRandomForestClassifier {
 
 	public void train() throws Exception {
 		forest.buildClassifier( trainingData );
+		Evaluation eval = new Evaluation( trainingData );
+		eval.crossValidateModel( forest, trainingData, 10, new Random( 1 ) );
+		System.out.println( forest );
+		System.out.println( eval.toSummaryString() );
+		System.out.println( "weighted area under ROC:" + eval.weightedAreaUnderROC() );
+		System.out.println( "weighted precision:" + eval.weightedPrecision() );
+		System.out.println( "weighted recall:" + eval.weightedRecall() );
+//		weka.core.SerializationHelper.write( "checkpoint.model", forest );
 	}
+
 
 	public Map< LabelingSegment, Double > predict( LabelingFrames labelingFrames ) {
 		Map< LabelingSegment, Double > costs = new HashMap<>();
 		Instances testData = newTable();
 		for ( int t = 0; t < labelingFrames.getNumFrames(); t++ ) {
 			for ( final LabelingSegment segment : labelingFrames.getSegments( t ) ) {
-				DenseInstance ins = extractFeaturesFromHypotheses( segment, 0 );
+				DenseInstance ins = extractFeaturesFromHypotheses( segment, 1, 0 );
 				ins.setDataset( testData );
 				try {
 					double prob = forest.distributionForInstance( ins )[1];
 					costs.put( segment, -prob );
-					
 				} catch ( Exception e ) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -83,12 +95,12 @@ public class MetaSegRandomForestClassifier {
 		return costs;
 	}
 
-	private DenseInstance extractFeaturesFromHypotheses( LabelingSegment hypothesis, int category ) {
+	private DenseInstance extractFeaturesFromHypotheses( LabelingSegment hypothesis, double weight, int category ) {
 		Polygon2D poly = ops.geom().contour( ( RandomAccessibleInterval ) hypothesis.getRegion(), true );
 		double perimeter = ops.geom().boundarySize( poly ).get();
 		double convexity = ops.geom().convexity( poly ).get();
 		double circularity = ops.geom().circularity( poly ).get();
-		DenseInstance ins = new DenseInstance( 1.0, new double[] { hypothesis.getArea(), perimeter, convexity, circularity, category } );
+		DenseInstance ins = new DenseInstance( weight, new double[] { hypothesis.getArea(), perimeter, convexity, circularity, category } );
 		return ins;
 	}
 
