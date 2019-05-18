@@ -68,6 +68,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private int maxHypothesisSize = 1000; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 16;
 	private MetaSegRandomForestClassifier rf;
+	private boolean quit;
+	private boolean activeLearningMode = true;
 
 
 
@@ -173,9 +175,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
-				goodHypotheses.add( labelingSegment );
-				MetaSegLog.log.info( "Added as good segment!" );
-				showTrainSegment();
+				if ( quit == false ) {
+					goodHypotheses.add( labelingSegment );
+					MetaSegLog.log.info( "Added as good segment!" );
+					showTrainSegment();
+				}
 			}
 
 		} );
@@ -184,9 +188,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
-				badHypotheses.add( labelingSegment );
-				MetaSegLog.log.info( "Added as bad segment!" );
-				showTrainSegment();
+				if ( quit == false ) {
+					badHypotheses.add( labelingSegment );
+					MetaSegLog.log.info( "Added as bad segment!" );
+					showTrainSegment();
+				}
 			}
 
 		} );
@@ -197,8 +203,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 
 				MetaSegLog.log.info( "Quitting classifying hypotheses..." );
-				showTrainSegment();
+				quitShowingTrainSegment();
 			}
+
 
 		} );
 	};
@@ -223,10 +230,19 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	}
 
+	private void quitShowingTrainSegment() {
+		bdvRemoveAll();
+		bdvAdd( parentModel.getRawData(), "RAW" );
+		quit = true;
+		JOptionPane
+				.showMessageDialog( null, "Quitting manual classification step..." );
+	}
+
+	public void setActiveLearningMode( boolean state ) {
+		activeLearningMode = state;
+	}
+
 	public void getRandomlySelectedSegmentHypotheses() {
-		int maxNumberOfDisplayHypotheses = 6; //TODO select this number more sensibly, maybe expose as parameter
-		manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
-		manualTrainHypotheses = new ArrayList< LabelingSegment >();
 		
 		List< List< LabelingSegment > > allSegsAllTime = new ArrayList< List< LabelingSegment > >( labelingFrames.getSegments() );
 		List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = new ArrayList<>();
@@ -236,23 +252,49 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				segsWithIdAndTime.add( new ValuePair< LabelingSegment, Integer >( ls, time ) );
 			}
 		}
+		int totalHypotheses = segsWithIdAndTime.size();
+		manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
+		manualTrainHypotheses = new ArrayList< LabelingSegment >();
 
-		for ( int dispHyp = 0; dispHyp < maxNumberOfDisplayHypotheses; dispHyp++ ) {
+		if ( activeLearningMode ) {
+			double train_test_frac = 0.1;
+			dataSplitActiveMode( segsWithIdAndTime, ( int ) ( totalHypotheses * train_test_frac ) );
 
-			Random rand = new Random();
-			System.out.println( segsWithIdAndTime.size() );
-			int randId = rand.nextInt( segsWithIdAndTime.size() );
-			manualTrainHypotheses.add( segsWithIdAndTime.get( randId ).getA() );
-			manualTrainHypothesesTimeIndices.add( segsWithIdAndTime.get( randId ).getB() );
-			segsWithIdAndTime.remove( randId );
+		} else {
+			dataSplitSupervisedMode( segsWithIdAndTime, totalHypotheses );
 		}
-		
+
 		alreadyDisplayedHypotheses = new ArrayList< Integer >( Collections.nCopies( manualTrainHypotheses.size(), 0 ) );
 		goodHypotheses = new ArrayList< LabelingSegment >();
 		badHypotheses = new ArrayList< LabelingSegment >();
 		JOptionPane
 				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
 		showTrainSegment();
+	}
+
+	private void dataSplitActiveMode( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int trainCardinality ) {
+		getKRandomSegments( segsWithIdAndTime, trainCardinality );
+
+	}
+
+	private void dataSplitSupervisedMode( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int totalHypotheses ) {
+		getKRandomSegments( segsWithIdAndTime, totalHypotheses );
+	}
+
+	private void getKRandomSegments( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int k ) {
+		for ( int dispHyp = 0; dispHyp < k; dispHyp++ ) {
+
+			if ( quit ) {
+				break;
+			} else {
+				Random rand = new Random();
+				int randId = rand.nextInt( segsWithIdAndTime.size() );
+				manualTrainHypotheses.add( segsWithIdAndTime.get( randId ).getA() );
+				manualTrainHypothesesTimeIndices.add( segsWithIdAndTime.get( randId ).getB() );
+				segsWithIdAndTime.remove( randId );
+			}
+
+		}
 	}
 
 	public void showTrainSegment() {
@@ -342,5 +384,10 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	public void setQuit( boolean b ) {
+		quit = b;
+
 	}
 }
