@@ -70,7 +70,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private MetaSegRandomForestClassifier rf;
 	private boolean quit;
 	private boolean activeLearningMode = true;
-
+	private boolean iterateActiveLearningLoop = false;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -184,7 +184,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 		} );
 
-		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_N, 0 ), "No", new AbstractAction() {
+		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_R, 0 ), "No", new AbstractAction() {
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
@@ -244,6 +244,39 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public void getRandomlySelectedSegmentHypotheses() {
 		
+		if ( iterateActiveLearningLoop ) {
+			List< LabelingSegment > uncertain_ids = extractDataForActiveLearningLoop();
+
+			List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = getAllSegsWithIdAndTime();
+			//Find the uncertain id hypotheses and find their time points 
+			//Populate manualTrainHypothese
+			//Also need to populate manualTrainTimeIndices
+
+		} else {
+			List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = getAllSegsWithIdAndTime();
+			int totalHypotheses = segsWithIdAndTime.size();
+			manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
+			manualTrainHypotheses = new ArrayList< LabelingSegment >();
+
+			if ( activeLearningMode ) {
+				double train_test_frac = 0.1;
+				dataSplitActiveMode( segsWithIdAndTime, ( int ) ( totalHypotheses * train_test_frac ) );
+
+			} else {
+				dataSplitSupervisedMode( segsWithIdAndTime, totalHypotheses );
+			}
+
+			alreadyDisplayedHypotheses = new ArrayList< Integer >( Collections.nCopies( manualTrainHypotheses.size(), 0 ) );
+			goodHypotheses = new ArrayList< LabelingSegment >();
+			badHypotheses = new ArrayList< LabelingSegment >();
+		}
+
+		JOptionPane
+				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
+		showTrainSegment();
+	}
+
+	private List< ValuePair< LabelingSegment, Integer > > getAllSegsWithIdAndTime() {
 		List< List< LabelingSegment > > allSegsAllTime = new ArrayList< List< LabelingSegment > >( labelingFrames.getSegments() );
 		List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = new ArrayList<>();
 
@@ -252,24 +285,20 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				segsWithIdAndTime.add( new ValuePair< LabelingSegment, Integer >( ls, time ) );
 			}
 		}
-		int totalHypotheses = segsWithIdAndTime.size();
-		manualTrainHypothesesTimeIndices = new ArrayList< Integer >();
-		manualTrainHypotheses = new ArrayList< LabelingSegment >();
+		return segsWithIdAndTime;
+	}
 
-		if ( activeLearningMode ) {
-			double train_test_frac = 0.1;
-			dataSplitActiveMode( segsWithIdAndTime, ( int ) ( totalHypotheses * train_test_frac ) );
-
+	private List< LabelingSegment > extractDataForActiveLearningLoop() {
+		List< LabelingSegment > uncertain_ids = new ArrayList<>();
+		if ( !costs.isEmpty() ) {
+			for ( int i = 0; i < ( int ) ( costs.size() * 0.05 ); i++ ) {
+				//Pick the least probability ones close to 0.5
+			}
 		} else {
-			dataSplitSupervisedMode( segsWithIdAndTime, totalHypotheses );
+			System.out.println( "Empty costs!" );
 		}
 
-		alreadyDisplayedHypotheses = new ArrayList< Integer >( Collections.nCopies( manualTrainHypotheses.size(), 0 ) );
-		goodHypotheses = new ArrayList< LabelingSegment >();
-		badHypotheses = new ArrayList< LabelingSegment >();
-		JOptionPane
-				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
-		showTrainSegment();
+		return uncertain_ids;
 	}
 
 	private void dataSplitActiveMode( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int trainCardinality ) {
@@ -355,15 +384,10 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public void startTrainingPhase() throws Exception {
-		if ( !( goodHypotheses.isEmpty() ) && !( badHypotheses.isEmpty() ) ) {
+		if ( !( goodHypotheses.isEmpty() ) || !( badHypotheses.isEmpty() ) ) {
 			extractFeatures();
-		} else if ( goodHypotheses.isEmpty() ) {
-			JOptionPane
-					.showMessageDialog( null, "No good segmentation instances were selected during classification, continue training?..." ); //TODO make it yes, no pane
-		} else if ( badHypotheses.isEmpty() ) {
-			JOptionPane
-					.showMessageDialog( null, "No bad segmentation instances were selected during classification, continue training?..." ); //TODO make it yes, no pane
 		}
+
 	}
 
 	private void extractFeatures() throws Exception {
@@ -380,6 +404,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		costs = rf.predict( labelingFrames );
 	}
 
+
 	@Override
 	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
 		// TODO Auto-generated method stub
@@ -390,4 +415,13 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		quit = b;
 
 	}
+
+	public boolean getActiveLearningStatus() {
+		return activeLearningMode;
+	}
+
+	public void setIterateActiveLearningLoop( boolean b ) {
+		iterateActiveLearningLoop = b;
+	}
+
 }
