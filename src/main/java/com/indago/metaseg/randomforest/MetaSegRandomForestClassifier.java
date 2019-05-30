@@ -3,8 +3,8 @@ package com.indago.metaseg.randomforest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import org.scijava.Context;
 
@@ -16,7 +16,6 @@ import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.roi.geom.real.Polygon2D;
-import weka.classifiers.Evaluation;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instances;
@@ -42,10 +41,10 @@ public class MetaSegRandomForestClassifier {
 	}
 
 
-	public void initializeTrainingData( ArrayList< LabelingSegment > goodHypotheses, ArrayList< LabelingSegment > badHypotheses ) {
+	public void initializeTrainingData( List< LabelingSegment > goodHypotheses, List< LabelingSegment > badHypotheses ) {
 		trainingData = newTable();
-//		int relative_weight_bad = goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
-		int relative_weight_bad = 1;
+		int relative_weight_bad = goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
+//		int relative_weight_bad = 1;
 
 		for ( int i = 0; i < goodHypotheses.size(); i++ ) {
 			DenseInstance ins = extractFeaturesFromHypotheses( goodHypotheses.get( i ), 1, 1 );
@@ -66,18 +65,10 @@ public class MetaSegRandomForestClassifier {
 
 	public void train() throws Exception {
 		forest.buildClassifier( trainingData );
-		Evaluation eval = new Evaluation( trainingData );
-		eval.crossValidateModel( forest, trainingData, 10, new Random( 1 ) );
-		System.out.println( forest );
-		System.out.println( eval.toSummaryString() );
-		System.out.println( "weighted area under ROC:" + eval.weightedAreaUnderROC() );
-		System.out.println( "weighted precision:" + eval.weightedPrecision() );
-		System.out.println( "weighted recall:" + eval.weightedRecall() );
-//		weka.core.SerializationHelper.write( "checkpoint.model", forest );
 	}
 
 
-	public Map< LabelingSegment, Double > predict( LabelingFrames labelingFrames ) {
+	public Map< LabelingSegment, Double > predict( LabelingFrames labelingFrames ) {  //TODO Change here to only use prediction set for cost prediction
 		Map< LabelingSegment, Double > costs = new HashMap<>();
 		Instances testData = newTable();
 		for ( int t = 0; t < labelingFrames.getNumFrames(); t++ ) {
@@ -92,6 +83,23 @@ public class MetaSegRandomForestClassifier {
 				}
 			}
 		}
+		return costs;
+	}
+
+	public Map< LabelingSegment, Double > predict( List< LabelingSegment > predictionSet ) {  //TODO Change here to only use prediction set for cost prediction
+		Map< LabelingSegment, Double > costs = new HashMap<>();
+		Instances testData = newTable();
+		for ( final LabelingSegment segment : predictionSet ) {
+			DenseInstance ins = extractFeaturesFromHypotheses( segment, 1, 0 );
+			ins.setDataset( testData );
+			try {
+				double prob = forest.distributionForInstance( ins )[ 1 ];
+				costs.put( segment, -prob );
+			} catch ( Exception e ) {
+				e.printStackTrace();
+			}
+		}
+
 		return costs;
 	}
 

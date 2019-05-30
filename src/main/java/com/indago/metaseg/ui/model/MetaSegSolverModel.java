@@ -6,8 +6,6 @@ package com.indago.metaseg.ui.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JOptionPane;
-
 import com.indago.fg.Assignment;
 import com.indago.fg.AssignmentMapper;
 import com.indago.fg.FactorGraphFactory;
@@ -100,17 +98,6 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 		solveFactorGraphInternally();
 		MetaSegLog.solverLog.info( "...done!" );
 
-		if ( costModel.getActiveLearningStatus() ) {
-
-			//TODO  remove it and replavce with JButton in Solver Panel for iterative training
-			int confirmResult =
-					JOptionPane.showConfirmDialog( null, "continue iterative training?...", "Warning", JOptionPane.YES_NO_OPTION );
-			if ( confirmResult == JOptionPane.YES_OPTION ) {
-				costModel.setIterateActiveLearningLoop( true );
-				costModel.getRandomlySelectedSegmentHypotheses();
-			}
-
-		}
 	}
 
 	private void solveFactorGraphInternally() {
