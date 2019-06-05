@@ -43,7 +43,7 @@ public class MetaSegRandomForestClassifier {
 
 	public void initializeTrainingData( List< LabelingSegment > goodHypotheses, List< LabelingSegment > badHypotheses ) {
 		trainingData = newTable();
-		int relative_weight_bad = goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
+		double relative_weight_bad = ( double ) goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
 //		int relative_weight_bad = 1;
 
 		for ( int i = 0; i < goodHypotheses.size(); i++ ) {
