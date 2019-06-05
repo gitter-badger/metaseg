@@ -192,7 +192,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 		} );
 
-		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_R, 0 ), "No", new AbstractAction() {
+		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_N, 0 ), "No", new AbstractAction() {
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
