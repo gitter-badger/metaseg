@@ -8,6 +8,7 @@ import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
@@ -31,6 +32,8 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private JSplitPane splitPane;
 	private JButton btnRun;
 
+	private JButton btnExport;
+
 	public MetaSegSolutionPanel( final MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );
 		this.model = solutionModel;
@@ -49,10 +52,20 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		final MigLayout layout = new MigLayout( "", "[][grow]", "" );
 		final JPanel controls = new JPanel( layout );
 
+		final JPanel panelSolve = new JPanel( new MigLayout() );
+		panelSolve.setBorder( BorderFactory.createTitledBorder( "solver" ) );
 		btnRun = new JButton( "run" );
 		btnRun.addActionListener( this );
+		panelSolve.add( btnRun, "growx, wrap" );
 
-		controls.add( btnRun, "span, growx, wrap" );
+		final JPanel panelExport = new JPanel( new MigLayout() );
+		panelExport.setBorder( BorderFactory.createTitledBorder( "export" ) );
+		btnExport = new JButton( "export segmentations" );
+		btnExport.addActionListener( this );
+		panelExport.add( btnExport, "growx, wrap" );
+
+		controls.add( panelSolve, "growx, wrap" );
+		controls.add( panelExport, "growx, wrap" );
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
