@@ -1,10 +1,14 @@
 package com.indago.metaseg.ui.util;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
 
 public class Utils {
 
@@ -19,4 +23,15 @@ public class Utils {
 
 		return result;
 	}
+
+	public static String getSelectedButtonText( ButtonGroup buttonGroup ) {
+		for ( Enumeration< AbstractButton > buttons = buttonGroup.getElements(); buttons.hasMoreElements(); ) {
+			AbstractButton button = buttons.nextElement();
+
+			if ( button.isSelected() ) { return button.getText(); }
+		}
+
+		return null;
+	}
+
 }

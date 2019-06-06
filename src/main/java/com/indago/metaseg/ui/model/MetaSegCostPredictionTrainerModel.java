@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,8 +77,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private int displaySegmentCount;
 	private List< LabelingSegment > trainSetForThisIter;
 	private List< Integer > trainSetTimeForThisIter;
-
-
+	public String alMode;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -219,6 +219,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 
 		} );
+
 	};
 
 	public void registerKeyBinding( KeyStroke keyStroke, String name, Action action ) {
@@ -276,18 +277,69 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	private List< LabelingSegment > extractDataForActiveLearningLoop() {
 		List< LabelingSegment > uncertain_segments = null;
-		if ( !costs.isEmpty() ) {
-			uncertain_segments = costs
-					.entrySet()
+		double uncertaintyLB; 
+		double uncertaintyUB;
+		if ( alMode == "random" ) {
+			List< LabelingSegment > all_segments = new ArrayList<>();
+			List< LabelingSegment > keys = new ArrayList( costs.keySet() );
+			Collections.shuffle( keys );
+			for ( LabelingSegment o : keys ) {
+				// Access keys/values in a random order
+				all_segments.add( o );
+			}
+			List< LabelingSegment > diff = all_segments
 					.stream()
-					.filter( entry -> ( entry.getValue() > -0.8d && entry.getValue() < -0.2d ) )
-					.map( Entry::getKey )
+					.filter( e -> !goodHypotheses.contains( e ) )
 					.collect( Collectors.toList() );
-			System.out.println( uncertain_segments.size() );
-		} else {
-			System.out.println( "Empty costs!" );
+			uncertain_segments = diff
+					.stream()
+					.filter( e -> !badHypotheses.contains( e ) )
+					.collect( Collectors.toList() );
+			if ( uncertain_segments.isEmpty() ) {
+				System.out.println( "Empty costs!" );
+			}
+
+		} else if ( alMode == "active learning (normal)" ) {
+			if ( !costs.isEmpty() ) {
+
+				uncertaintyLB = -0.8d;
+				uncertaintyUB = -0.2d;
+				uncertain_segments = getSegmnetsByUncertaintyProbability( uncertaintyLB, uncertaintyUB );
+				MetaSegLog.log.info( "showig uncertain hypotheses." );
+			} else {
+				System.out.println( "Empty costs!" );
+			}
+
+		} else if ( alMode == "active learning (class balance)" ) {
+			if ( !costs.isEmpty() ) {
+				if ( goodHypotheses.size() >= badHypotheses.size() ) {
+					uncertaintyLB = -0.49d;
+					uncertaintyUB = -0.2d;
+					MetaSegLog.log.info( "showig more of likely bad hypotheses." );
+				} else {
+					uncertaintyLB = -0.8d;
+					uncertaintyUB = -0.51d;
+					MetaSegLog.log.info( "showig more of likely good hypotheses." );
+				}
+				uncertain_segments = getSegmnetsByUncertaintyProbability( uncertaintyLB, uncertaintyUB );
+			} else {
+				System.out.println( "Empty costs!" );
+			}
+
 		}
 
+		return uncertain_segments;
+	}
+
+	private List< LabelingSegment > getSegmnetsByUncertaintyProbability( double uncertaintyLB, double uncertaintyUB ) {
+		List< LabelingSegment > uncertain_segments;
+		uncertain_segments = costs
+				.entrySet()
+				.stream()
+				.filter( entry -> ( entry.getValue() > uncertaintyLB && entry.getValue() < uncertaintyUB ) )
+				.map( Entry::getKey )
+				.collect( Collectors.toList() );
+		System.out.println( uncertain_segments.size() );
 		return uncertain_segments;
 	}
 
@@ -449,5 +501,10 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		return uncertainSetTimeIndices;
 	}
+
+	public void setALMode( String mode ) {
+		alMode = mode;
+	}
+
 
 }

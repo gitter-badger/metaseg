@@ -16,11 +16,13 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
+import com.indago.metaseg.ui.util.Utils;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
@@ -51,6 +53,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JButton btnContinueActiveLearning;
 
 	private ButtonGroup trainingModeButtons;
+
+	private JSlider transparencySlider;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -105,26 +109,9 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		trainingModeButtons = new ButtonGroup();
 		JRadioButton bRandom = new JRadioButton( "random" );
-		bRandom.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-			}
-		} );
 		JRadioButton bActiveLearningNormal = new JRadioButton( "active learning (normal)" );
-		bActiveLearningNormal.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-			}
-		} );
 		JRadioButton bActiveLeraningWithBalance = new JRadioButton( "active learning (class balance)" );
-		bActiveLeraningWithBalance.addActionListener( new ActionListener() {
 
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-			}
-		} );
 		trainingModeButtons.add( bRandom );
 		trainingModeButtons.add( bActiveLearningNormal );
 		trainingModeButtons.add( bActiveLeraningWithBalance );
@@ -163,6 +150,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
 		this.add( splitPane, BorderLayout.CENTER );
 	}
+
 
 	/**
 	 * @see java.awt.event.ActionListener#actionPerformed(java.awt.event.ActionEvent)
@@ -225,6 +213,13 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		MetaSegLog.segmenterLog.info( "In active learning mode..." );
 		model.setIterateActiveLearningLoop( true );
 		model.setQuit( false );
+		if ( getTrainingMode() == "random" ) {
+			model.setALMode( "random" );
+		} else if ( getTrainingMode() == "active learning (normal)" ) {
+			model.setALMode( "active learning (normal)" );;
+		} else if ( getTrainingMode() == "active learning (class balance)" ) {
+			model.setALMode( "active learning (class balance)" );
+		}
 		model.getTrainingData();
 	}
 
@@ -261,6 +256,10 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			txtMinPixelComponentSize.setText( "" + model.getMinPixelComponentSize() );
 		}
 
+	}
+
+	public String getTrainingMode() {
+		return Utils.getSelectedButtonText( trainingModeButtons );
 	}
 
 }
