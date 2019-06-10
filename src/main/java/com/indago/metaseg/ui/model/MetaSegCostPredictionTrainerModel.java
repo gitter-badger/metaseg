@@ -78,6 +78,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private List< LabelingSegment > trainSetForThisIter;
 	private List< Integer > trainSetTimeForThisIter;
 	public String alMode;
+	private String lastClassifiedSegmentClass;
+	private int undoSteps; //Only implementing 1 step undo otherwise it'll need remembering if all the hypotheses added belong to which of bad/good hypotheses bucket
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -184,10 +186,14 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 				if ( quit == false ) {
 					goodHypotheses.add( labelingSegment );
+					lastClassifiedSegmentClass = "good";
+					undoSteps = 0;
 					modifyTrainingSet( labelingSegment );
 					MetaSegLog.log.info( "Added as good segment!" );
 					displayNextSegment();
 				}
+				System.out.println( "Good hypotheses" + goodHypotheses.size() );
+				System.out.println( "Bad hypotheses" + badHypotheses.size() );
 			}
 
 		} );
@@ -198,10 +204,46 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 				if ( quit == false ) {
 					badHypotheses.add( labelingSegment );
+					lastClassifiedSegmentClass = "bad";
+					undoSteps = 0;
 					modifyTrainingSet( labelingSegment );
 					MetaSegLog.log.info( "Added as bad segment!" );
 					displayNextSegment();
 				}
+				System.out.println( "Good hypotheses" + goodHypotheses.size() );
+				System.out.println( "Bad hypotheses" + badHypotheses.size() );
+			}
+
+		} );
+
+		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_U, 0 ), "Undo", new AbstractAction() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+
+				undoSteps = undoSteps + 1;
+				if ( undoSteps >= 2 ) {
+					JOptionPane
+							.showMessageDialog( null, "Only one step undo allowed ..." );
+					MetaSegLog.log.info( "Cannot undo more than one step..." );
+				}
+				else {
+					MetaSegLog.log.info( "Fetching last classified hypothesis for undo..." );
+					if ( lastClassifiedSegmentClass == "good" ) {
+						goodHypotheses.remove( goodHypotheses.size() - 1 );
+					} else {
+						badHypotheses.remove( badHypotheses.size() - 1 );
+					}
+					if ( displaySegmentCount > 0 ) {
+						displaySegmentCount = displaySegmentCount - 2;
+					} else {
+						JOptionPane
+								.showMessageDialog( null, "Nothing available to undo ..." );
+					}
+					displayNextSegment();
+				}
+				System.out.println( "Good hypotheses" + goodHypotheses.size() );
+				System.out.println( "Bad hypotheses" + badHypotheses.size() );
 			}
 
 		} );
@@ -212,6 +254,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 
 				modifyPredictionSet();
+				undoSteps = 0;
 				MetaSegLog.log.info( "Quitting classifying hypotheses..." );
 				quitShowingTrainSegment();
 
