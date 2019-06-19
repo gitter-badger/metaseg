@@ -13,6 +13,7 @@ import java.awt.event.FocusListener;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -48,13 +49,15 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private JButton btnStartTrain;
 
-	private JButton btnPredCosts;
+	private JButton btnComputeSoln;
 
 	private JButton btnContinueActiveLearning;
 
 	private ButtonGroup trainingModeButtons;
 
 	private JSlider transparencySlider;
+
+	private JCheckBox boxContinuousRetrain;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -116,28 +119,20 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		trainingModeButtons.add( bActiveLearningNormal );
 		trainingModeButtons.add( bActiveLeraningWithBalance );
 
-		btnStartTrain = new JButton( "train" );
-		btnStartTrain.addActionListener( this );
-		btnContinueActiveLearning = new JButton( "continue learning" );
-		btnContinueActiveLearning.addActionListener( this );
+		boxContinuousRetrain = new JCheckBox( "continuous retrain" );
 
 		panelTrain.add( bRandom, "span 2, growx, wrap" );
 		panelTrain.add( bActiveLearningNormal, "span 2, growx, wrap" );
 		panelTrain.add( bActiveLeraningWithBalance, "span 2, gapbottom 15, growx, wrap" );
-		panelTrain.add( btnStartTrain, "growx, wrap" );
-		panelTrain.add( btnContinueActiveLearning, "growx, wrap" );
+		panelTrain.add( boxContinuousRetrain, "growx, wrap" );
 
 		final JPanel panelCostPrediction = new JPanel( new MigLayout() );
-		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "cost prediction" ) );
+		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "compute" ) );
 
-		btnRandCosts = new JButton( "set random costs" );
-		btnRandCosts.addActionListener( this );
+		btnComputeSoln = new JButton( "compute solution" );
+		btnComputeSoln.addActionListener( this );
 
-		btnPredCosts = new JButton( "set predicted costs" );
-		btnPredCosts.addActionListener( this );
-
-		panelCostPrediction.add( btnPredCosts, "growx, wrap" );
-		panelCostPrediction.add( btnRandCosts, "growx, wrap" );
+		panelCostPrediction.add( btnComputeSoln, "growx, wrap" );
 
 		controls.add( panelFetch, "growx, wrap" );
 		controls.add( panelPrepareTrainData, "growx, wrap" );
@@ -170,7 +165,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-		} else if ( e.getSource().equals( btnPredCosts ) ) {
+		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 			actionSetPredCosts();
 		} else if ( e.getSource().equals( btnContinueActiveLearning ) ) {
 			actionContinueActiveLearning();
