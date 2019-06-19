@@ -22,7 +22,6 @@ import net.imglib2.view.Views;
  */
 public class MetaSegModel implements AutoCloseable {
 
-	private MetaSegMainPanel mainPanel;
 	private final MetaSegSegmentationCollectionModel segModel;
 	private final MetaSegCostPredictionTrainerModel costTrainerModel;
 
@@ -33,7 +32,7 @@ public class MetaSegModel implements AutoCloseable {
 	private InputTriggerConfig defaultBdvInputTriggerConfig;
 
 	private final ProjectFolder projectFolder;
-	private final MetaSegMainPanel mainUiPanel;
+	private MetaSegMainPanel mainUiPanel;
 	private final MetaSegSolverModel modelSolver;
 
 	private boolean is2D;
@@ -73,7 +72,7 @@ public class MetaSegModel implements AutoCloseable {
 	}
 
 	public void setRefToMainPanel( final MetaSegMainPanel metaSegMainPanel ) {
-		this.mainPanel = metaSegMainPanel;
+		this.mainUiPanel = metaSegMainPanel;
 	}
 
 	public void setDefaultInputTriggerConfig( final InputTriggerConfig conf ) {
