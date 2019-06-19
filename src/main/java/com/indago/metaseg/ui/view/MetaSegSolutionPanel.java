@@ -112,10 +112,10 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 	private void actionContinueMetaTrain() {
 		MetaSegLog.segmenterLog.info( "Starting MetaSeg optimization..." );
+		model.getModel().getMainPanel().getTabs().setSelectedComponent( model.getModel().getMainPanel().getTabTraining() );
 //		model.run();
 //		MetaSegLog.segmenterLog.info( "Done!" );
 //
 //		model.populateBdv();
-		model.getModel().getMainPanel().getTabs().setSelectedComponent( model.getModel().getMainPanel().getTabTraining() );
 	}
 }
