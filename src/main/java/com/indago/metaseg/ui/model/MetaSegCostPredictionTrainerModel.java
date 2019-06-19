@@ -192,8 +192,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 					MetaSegLog.log.info( "Added as good segment!" );
 					displayNextSegment();
 				}
-				System.out.println( "Good hypotheses" + goodHypotheses.size() );
-				System.out.println( "Bad hypotheses" + badHypotheses.size() );
+
 			}
 
 		} );
@@ -210,8 +209,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 					MetaSegLog.log.info( "Added as bad segment!" );
 					displayNextSegment();
 				}
-				System.out.println( "Good hypotheses" + goodHypotheses.size() );
-				System.out.println( "Bad hypotheses" + badHypotheses.size() );
+
 			}
 
 		} );
@@ -242,8 +240,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 					}
 					displayNextSegment();
 				}
-				System.out.println( "Good hypotheses" + goodHypotheses.size() );
-				System.out.println( "Bad hypotheses" + badHypotheses.size() );
 			}
 
 		} );
