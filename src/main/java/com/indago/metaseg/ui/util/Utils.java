@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
@@ -32,6 +33,21 @@ public class Utils {
 		}
 
 		return null;
+	}
+
+	public static int[] uniqueRand( int n, int m ) { //Choose n unique random numbers from 0 to m-1
+		Random rand = new Random();
+		int[] r = new int[ n ];
+		int[] result = new int[ n ];
+		for ( int i = 0; i < n; i++ ) {
+			r[ i ] = rand.nextInt( m - i );
+			result[ i ] = r[ i ];
+			for ( int j = i - 1; j >= 0; j-- ) {
+				if ( result[ i ] >= r[ j ] )
+					result[ i ]++;
+			}
+		}
+		return result;
 	}
 
 }

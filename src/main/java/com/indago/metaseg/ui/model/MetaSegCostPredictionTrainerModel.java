@@ -31,6 +31,7 @@ import com.indago.io.DataMover;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.data.LabelingFrames;
 import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
+import com.indago.metaseg.ui.util.Utils;
 import com.indago.ui.bdv.BdvOwner;
 
 import bdv.util.BdvHandlePanel;
@@ -88,6 +89,10 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	}
 
+	public MetaSegModel getParentModel() {
+		return parentModel;
+	}
+
 	public LabelingFrames getLabelings() {
 		if ( this.labelingFrames == null ) {
 			System.out.println( "Entered!" );
@@ -123,17 +128,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			ret.add( getConflictCliques( t ) );
 		}
 		return ret;
-	}
-
-	public void setRandomSegmentCosts() {
-		costs = new HashMap<>();
-		final Random r = new Random();
-		for ( int t = 0; t < labelingFrames.getNumFrames(); t++ ) {
-			for ( final LabelingSegment segment : labelingFrames.getSegments( t ) ) {
-				costs.put( segment, -r.nextDouble() );
-			}
-			MetaSegLog.log.info( String.format( "Random costs set for %d LabelingSegments at t=%d.", labelingFrames.getSegments( t ).size(), t ) );
-		}
 	}
 
 	public boolean hasCost( final LabelingSegment ls ) {
@@ -188,9 +182,16 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 					goodHypotheses.add( labelingSegment );
 					lastClassifiedSegmentClass = "good";
 					undoSteps = 0;
-					modifyTrainingSet( labelingSegment );
+					modifyTrainingSet( labelingSegment ); //maybe it can go away
+					modifyPredictionSet();
 					MetaSegLog.log.info( "Added as good segment!" );
-					displayNextSegment();
+					try {
+						selectSegmentForDisplay();
+					} catch ( Exception e1 ) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+//					displayNextSegment();
 				}
 
 			}
@@ -206,8 +207,15 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 					lastClassifiedSegmentClass = "bad";
 					undoSteps = 0;
 					modifyTrainingSet( labelingSegment );
+					modifyPredictionSet();
 					MetaSegLog.log.info( "Added as bad segment!" );
-					displayNextSegment();
+					try {
+						selectSegmentForDisplay();
+					} catch ( Exception e1 ) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+//					displayNextSegment();
 				}
 
 			}
@@ -281,7 +289,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	}
 
-	private void quitShowingTrainSegment() {
+	private void quitShowingTrainSegment() { //this should go away for compute solution functionality
 		bdvRemoveAll();
 		bdvAdd( parentModel.getRawData(), "RAW" );
 		quit = true;
@@ -294,7 +302,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		int totalHypotheses = segsWithIdAndTime.size();
 		randomizedHypothesesTimeIndices = new ArrayList< Integer >();
 		randomizedAllHypotheses = new ArrayList< LabelingSegment >();
-		shuffleSegmentsForTraining( segsWithIdAndTime, totalHypotheses );
+		getAllSegmentsRandomized( segsWithIdAndTime, totalHypotheses );
 		trainingSet = new ArrayList<>();
 		predictionSet = new ArrayList<>( randomizedAllHypotheses );
 		goodHypotheses = new ArrayList< LabelingSegment >();
@@ -382,10 +390,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return uncertain_segments;
 	}
 
-	private void shuffleSegmentsForTraining( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int totalHypotheses ) {
-		getAllSegmentsRandomized( segsWithIdAndTime, totalHypotheses );
-	}
-
 	private void getAllSegmentsRandomized( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int k ) {
 		for ( int dispHyp = 0; dispHyp < k; dispHyp++ ) {
 			Random rand = new Random();
@@ -408,6 +412,80 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		displaySegmentCount = -1;
 	}
+
+	private void selectSegmentForDisplay() throws Exception {
+		if ( goodHypotheses.size() < 1 || badHypotheses.size() < 1 ) {
+			//No need to do intermediate prediction as if there is no instance of one class, everything will be predicted to other class
+			displayNextSegment();
+		} else {
+			//Also need to check if checkbox is on
+			startTrainingPhase();
+			double uncertaintyLB;
+			double uncertaintyUB;
+			LabelingSegment chosenSeg = null;
+			if ( alMode == "active learning (normal)" ) {
+				uncertaintyLB = -0.8d;
+				uncertaintyUB = -0.2d;
+				chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
+			} else if ( alMode == "active learning (class balance)" ) { //still to do for random mode
+				if ( goodHypotheses.size() >= badHypotheses.size() ) {
+					uncertaintyLB = -0.49d;
+					uncertaintyUB = -0.2d;
+				} else {
+					uncertaintyLB = -0.8d;
+					uncertaintyUB = -0.51d;
+				}
+				chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
+			}
+			displaySelectedSegment( chosenSeg ); //Modify this appropriately to display the chosen segment, maybe create another method with different arguments 
+		}
+	}
+
+	private void displaySelectedSegment( LabelingSegment chosenSeg ) { //Can be removed later or modified to accomodate displaynextSegment()
+		bdvRemoveAll();
+		bdvAdd( parentModel.getRawData(), "RAW" );
+		final int c = 1;
+		final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
+		LabelingSegment segment = trainSetForThisIter.get( displaySegmentCount );
+		Integer time = trainSetTimeForThisIter.get( displaySegmentCount );
+
+		IterableRegion< ? > region = segment.getRegion();
+
+		IntervalView< IntType > retSlice =
+				Views.hyperSlice(
+						hypothesisImage,
+						parentModel.getTimeDimensionIndex(),
+						time );
+		try {
+			Regions.sample( region, retSlice ).forEach( t -> t.set( c ) );
+
+		} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
+			MetaSegLog.log.error( aiaob );
+		}
+		bdvHandlePanel.getViewerPanel().setTimepoint( time );
+		bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
+		installBehaviour( segment );
+
+	}
+
+	private LabelingSegment pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) {
+		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.15 * predictionSet.size() ), predictionSet.size() );
+		int id = 0;
+		double cost;
+		LabelingSegment predHyp;
+		do {
+			predHyp = predictionSet.get( potentIds[ id ] );
+			id = id + 1;
+			List< LabelingSegment > hypothesisSet = new ArrayList<>();
+			hypothesisSet.add( predHyp );
+			Map< LabelingSegment, Double > segAndCost = computePredictedCosts( hypothesisSet );
+			cost = segAndCost.get( predHyp );
+
+		}
+		while ( cost > uncertaintyLB && cost < uncertaintyUB );
+		return predHyp;
+	}
+
 
 	private void displayNextSegment() {
 		displaySegmentCount = displaySegmentCount + 1;
@@ -443,7 +521,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	}
 
-	private void modifyTrainingSet( LabelingSegment segment ) {
+	private void modifyTrainingSet( LabelingSegment segment ) { //Maybe not needed
 		trainingSet.add( segment );
 	}
 
@@ -475,16 +553,17 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void extractFeatures() throws Exception {
-
 		rf = new MetaSegRandomForestClassifier();
 		rf.buildRandomForest();
 		rf.initializeTrainingData( goodHypotheses, badHypotheses );
-		rf.train();
-
-
+		trainForest( rf );
 	}
 
-	public void setPredictedCosts() {
+	private void trainForest( MetaSegRandomForestClassifier rf ) throws Exception {
+		rf.train();
+	}
+
+	public Map< LabelingSegment, Double > computePredictedCosts( List< LabelingSegment > predHyp ) { //Make it with input argument
 		costs = rf.predict( predictionSet );
 		System.out.println( "Size of costs:" + costs.size() );
 		for ( LabelingSegment segment : goodHypotheses ) {
@@ -495,6 +574,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		System.out.println( "Size of costs updated:" + costs.size() );
 		System.out.println( "Size of labels:" + randomizedAllHypotheses.size() );
+
+		return costs;
 	}
 
 
@@ -517,20 +598,17 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		if ( continueActiveLearning ) {
 			uncertainSegments = extractDataForActiveLearningLoop();
 			setTrainingSetForDisplay();
-			displaySegments();
+			displayNextSegment();
 
 		} else {
 			setTrainingSetForDisplay();
 			JOptionPane
 					.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
-			displaySegments();
+			displayNextSegment();
 
 		}
 	}
 
-	private void displaySegments() {
-		displayNextSegment();
-	}
 
 	private List< Integer > findTimeIndicesOfUncertainSegemts() {
 		List< Integer > uncertainSetTimeIndices = new ArrayList<>();

@@ -40,14 +40,11 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private JSplitPane splitPane;
 	private JButton btnFetch;
-	private JButton btnRandCosts;
 	private JButton btnPrepareTrainData;
 
 	private JTextField txtMaxPixelComponentSize;
 
 	private JTextField txtMinPixelComponentSize;
-
-	private JButton btnStartTrain;
 
 	private JButton btnComputeSoln;
 
@@ -154,18 +151,14 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	public void actionPerformed( final ActionEvent e ) {
 		if (e.getSource().equals( btnFetch )) {
 			actionFetch();
-		} else
-		if (e.getSource().equals( btnRandCosts )) {
-			actionSetRandomCosts();
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
 			actionFetchForManualClassify();
-		} else if ( e.getSource().equals( btnStartTrain ) ) {
+		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 			try {
 				actionStartTrain();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 			actionSetPredCosts();
 		} else if ( e.getSource().equals( btnContinueActiveLearning ) ) {
 			actionContinueActiveLearning();
@@ -174,7 +167,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void actionSetPredCosts() {
 		MetaSegLog.log.info( "Setting predicted cost values..." );
-		model.setPredictedCosts();
+		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
+//		model.setPredictedCosts();
 
 	}
 
@@ -197,11 +191,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getConflictGraphs();
 		model.getConflictCliques();
 		MetaSegLog.log.info( "Segmentation results fetched!" );
-	}
-
-	private void actionSetRandomCosts() {
-		MetaSegLog.log.info( "Setting random cost values." );
-		model.setRandomSegmentCosts();
 	}
 
 	private void actionContinueActiveLearning() {
