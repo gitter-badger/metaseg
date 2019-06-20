@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Stack;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -41,6 +42,7 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -64,16 +66,14 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private List< LabelingSegment > predictionSet;
 	private List< LabelingSegment > allSegs;
 	private List< Integer > allSegsTime;
-	private int maxHypothesisSize = 1000; // gets set to more sensible value in constructor
-	private int minHypothesisSize = 16;
+	private int maxHypothesisSize = 30000; // gets set to more sensible value in constructor
+	private int minHypothesisSize = 100;
 	private MetaSegRandomForestClassifier rf;
-	private int displaySegmentCount;
-	private List< LabelingSegment > trainSetForThisIter;
 	private List< Integer > trainSetTimeForThisIter;
 
 	public String alMode;
-	private String lastClassifiedSegmentClass;
-	private int undoSteps; //Only implementing 1 step undo otherwise it'll need remembering if all the hypotheses added belong to which of bad/good hypotheses bucket
+	private Stack< Pair< LabelingSegment, String > > undoStack = new Stack<>();
+	private boolean continuousRetrainState;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -192,8 +192,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			@Override
 			public void actionPerformed( ActionEvent e ) {
 				goodHypotheses.add( labelingSegment );
-				lastClassifiedSegmentClass = "good";
-				undoSteps = 0;
+				undoStack.push( new ValuePair<>( labelingSegment, "good" ) );
 				modifyPredictionSet();
 				MetaSegLog.log.info( "Added as good segment!" );
 				try {
@@ -212,8 +211,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 
 				badHypotheses.add( labelingSegment );
-				lastClassifiedSegmentClass = "bad";
-				undoSteps = 0;
+				undoStack.push( new ValuePair<>( labelingSegment, "bad" ) );
 				modifyPredictionSet();
 				MetaSegLog.log.info( "Added as bad segment!" );
 				try {
@@ -224,37 +222,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			}
 
 		} );
-
-		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_U, 0 ), "Undo", new AbstractAction() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-
-				undoSteps = undoSteps + 1;
-				if ( undoSteps >= 2 ) {
-					JOptionPane
-							.showMessageDialog( null, "Only one step undo allowed ..." );
-					MetaSegLog.log.info( "Cannot undo more than one step..." );
-				}
-				else {
-					MetaSegLog.log.info( "Fetching last classified hypothesis for undo..." );
-					if ( lastClassifiedSegmentClass == "good" ) {
-						goodHypotheses.remove( goodHypotheses.size() - 1 );
-					} else {
-						badHypotheses.remove( badHypotheses.size() - 1 );
-					}
-					if ( displaySegmentCount > 0 ) {
-						displaySegmentCount = displaySegmentCount - 2;
-					} else {
-						JOptionPane
-								.showMessageDialog( null, "Nothing available to undo ..." );
-					}
-					displayNextSegment();
-				}
-			}
-
-		} );
-
 	};
 
 	public void registerKeyBinding( KeyStroke keyStroke, String name, Action action ) {
@@ -309,57 +276,56 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		for ( LabelingSegment labelingSegment : predictionSet ) {
 			trainSetTimeForThisIter.add( findTimeIndexOfQueriedSegemt( labelingSegment ) );
 		}
-		displaySegmentCount = -1;
 	}
 
 	public void selectSegmentForDisplay() throws Exception {
 		if ( goodHypotheses.size() < 1 || badHypotheses.size() < 1 ) {
 			//No need to do intermediate prediction as if there is no instance of one class, everything will be predicted to other class
-			displayNextSegment();
+			displaySelectedSegment( predictionSet.get( 0 ) );
 		} else {
-			//Also need to check if checkbox is on
-			startTrainingPhase();
-			double uncertaintyLB;
-			double uncertaintyUB;
-			LabelingSegment chosenSeg = null;
-			if ( alMode == "active learning (normal)" ) {
-				uncertaintyLB = -0.8d;
-				uncertaintyUB = -0.2d;
-				chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
-			} else if ( alMode == "active learning (class balance)" ) { //still to do for random mode
-				if ( goodHypotheses.size() >= badHypotheses.size() ) {
-					uncertaintyLB = -0.49d;
-					uncertaintyUB = -0.2d;
-				} else {
+			if ( continuousRetrainState ) {
+				startTrainingPhase();
+				double uncertaintyLB;
+				double uncertaintyUB;
+				LabelingSegment chosenSeg = null;
+				if ( alMode == "active learning (normal)" ) {
 					uncertaintyLB = -0.8d;
-					uncertaintyUB = -0.51d;
+					uncertaintyUB = -0.2d;
+					chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
+				} else if ( alMode == "active learning (class balance)" ) {
+					if ( goodHypotheses.size() >= badHypotheses.size() ) {
+						uncertaintyLB = -0.49d;
+						uncertaintyUB = -0.2d;
+					} else {
+						uncertaintyLB = -0.8d;
+						uncertaintyUB = -0.51d;
+					}
+					chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
+				} else if ( alMode == "random" ) {
+					List< LabelingSegment > allSegments = new ArrayList<>( predictionSet );
+					if ( allSegments.isEmpty() ) {
+						System.out.println( "Empty!" );
+					}
+					Random rand = new Random();
+					int n = rand.nextInt( allSegments.size() );
+					chosenSeg = allSegments.get( n );
 				}
-				chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
-			} else if ( alMode == "random" ) {
-				List< LabelingSegment > allSegments = new ArrayList<>( predictionSet );
-				if ( allSegments.isEmpty() ) {
-					System.out.println( "Empty!" );
+				displaySelectedSegment( chosenSeg );
+			} else {
+				if ( !predictionSet.isEmpty() ) {
+					displaySelectedSegment( predictionSet.get( 0 ) );
+				} else {
+					JOptionPane.showMessageDialog( null, "Finished classifying all hypotheses..." );
 				}
-				Random rand = new Random();
-				int n = rand.nextInt( allSegments.size() );
-				chosenSeg = allSegments.get( n );
+
 			}
-			displaySelectedSegment( chosenSeg );
+
 		}
 	}
 
 	private void displaySelectedSegment( LabelingSegment chosenSeg ) { //Can be removed later or modified to accommodate displaynextSegment()
+
 		showSeg( chosenSeg );
-	}
-
-	private void displayNextSegment() {
-		displaySegmentCount = displaySegmentCount + 1;
-
-		if ( displaySegmentCount < predictionSet.size() ) {
-			showSeg( predictionSet.get( displaySegmentCount ) );
-		} else {
-			JOptionPane.showMessageDialog( null, "Finished classifying all hypotheses..." );
-		}
 	}
 
 	private void showSeg( LabelingSegment chosenSeg ) {
@@ -460,7 +426,12 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		setTrainingSetForDisplay();
 		JOptionPane
 				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
-		displayNextSegment();
+		if ( !predictionSet.isEmpty() ) {
+			displaySelectedSegment( predictionSet.get( 0 ) );
+		} else {
+			JOptionPane.showMessageDialog( null, "No hypotheses to display..." );
+		}
+
 	}
 
 	private int findTimeIndexOfQueriedSegemt( LabelingSegment segment ) {
@@ -478,4 +449,15 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		
 	}
 
+	public void setContinuousRetrainState( boolean b ) {
+		continuousRetrainState = b;
+	}
+
+	public void callUndo() {
+		if ( !undoStack.isEmpty() ) {
+			final Pair< LabelingSegment, String > poppedStatePair = undoStack.pop();
+			displaySelectedSegment( poppedStatePair.getA() );
+		}
+
+	}
 }

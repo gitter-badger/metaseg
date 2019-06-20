@@ -53,6 +53,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private JCheckBox boxContinuousRetrain;
 
+	private JButton btnUndo;
+
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
 		this.model = costTrainerModel;
@@ -113,6 +115,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			@Override
 			public void actionPerformed( ActionEvent e ) {
 				model.setALMode( "random" );
+				boxContinuousRetrain.setSelected( false );
 			}
 		} );
 		bActiveLearningNormal.addActionListener( new ActionListener() {
@@ -120,7 +123,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			@Override
 			public void actionPerformed( ActionEvent e ) {
 				model.setALMode( "active learning (normal)" );
-
+				boxContinuousRetrain.setSelected( true );
 			}
 		} );
 		bActiveLeraningWithBalance.addActionListener( new ActionListener() {
@@ -128,6 +131,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			@Override
 			public void actionPerformed( ActionEvent e ) {
 				model.setALMode( "active learning (class balance)" );
+				boxContinuousRetrain.setSelected( true );
 			}
 		} );
 
@@ -136,6 +140,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		trainingModeButtons.add( bActiveLeraningWithBalance );
 
 		boxContinuousRetrain = new JCheckBox( "continuous retrain" );
+		boxContinuousRetrain.addActionListener( this );
 
 		panelTrain.add( bRandom, "span 2, growx, wrap" );
 		panelTrain.add( bActiveLearningNormal, "span 2, growx, wrap" );
@@ -150,10 +155,19 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		panelCostPrediction.add( btnComputeSoln, "growx, wrap" );
 
+		final JPanel panelUndo = new JPanel( new MigLayout() );
+		panelUndo.setBorder( BorderFactory.createTitledBorder( "" ) );
+
+		btnUndo = new JButton( "undo" );
+		btnUndo.addActionListener( this );
+
+		panelUndo.add( btnUndo, "growx, wrap" );
+
 		controls.add( panelFetch, "growx, wrap" );
 		controls.add( panelPrepareTrainData, "growx, wrap" );
 		controls.add( panelTrain, "growx, wrap" );
 		controls.add( panelCostPrediction, "growx, wrap" );
+		controls.add( panelUndo, "growx, wrap" );
 
 		bActiveLeraningWithBalance.doClick();
 
@@ -179,7 +193,20 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 				e1.printStackTrace();
 			}
 
+		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
+			JCheckBox state = ( JCheckBox ) e.getSource();
+			if ( state.isSelected() ) {
+				model.setContinuousRetrainState( true );
+			} else {
+				model.setContinuousRetrainState( false );
+			}
+		} else if ( e.getSource().equals( btnUndo ) ) {
+			actionCallUndo();
 		}
+	}
+
+	private void actionCallUndo() {
+		model.callUndo();
 	}
 
 	private void actionComputeAllCostsAndRunSolver() throws Exception {
