@@ -59,17 +59,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private final List< RandomAccessibleInterval< IntType > > imgs = new ArrayList<>();
 	private final List< BdvSource > bdvSources = new ArrayList<>();
 	private final List< BdvOverlay > overlays = new ArrayList<>();
-	private List< LabelingSegment > randomizedAllHypotheses; // Stores all hypotheses in a randomized order
-	private List< Integer > randomizedHypothesesTimeIndices; // Stores all hypotheses time points
 	private List< LabelingSegment > goodHypotheses;
 	private List< LabelingSegment > badHypotheses;
 	private List< LabelingSegment > predictionSet;
+	private List< LabelingSegment > allSegs;
+	private List< Integer > allSegsTime;
 	private int maxHypothesisSize = 1000; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 16;
 	private MetaSegRandomForestClassifier rf;
 	private int displaySegmentCount;
 	private List< LabelingSegment > trainSetForThisIter;
 	private List< Integer > trainSetTimeForThisIter;
+
 	public String alMode;
 	private String lastClassifiedSegmentClass;
 	private int undoSteps; //Only implementing 1 step undo otherwise it'll need remembering if all the hypotheses added belong to which of bad/good hypotheses bucket
@@ -274,48 +275,44 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		bdvAdd( parentModel.getRawData(), "RAW" );
 	}
 
-	public void randomizeSegmentHypotheses() {
-		List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = getAllSegsWithIdAndTime();
-		int totalHypotheses = segsWithIdAndTime.size();
-		randomizedHypothesesTimeIndices = new ArrayList< Integer >(); //Set pred set to segsWithIdAndTime. Remove this and randomize in setTrainingSetForDisplay
-		randomizedAllHypotheses = new ArrayList< LabelingSegment >();
-		getAllSegmentsRandomized( segsWithIdAndTime, totalHypotheses );
-		predictionSet = new ArrayList<>( randomizedAllHypotheses );
+	public void randomizeSegmentsAndPrepData() {
+		List< LabelingSegment > temp = new ArrayList<>( allSegs );
+		List< LabelingSegment > randomizedSegs = getAllSegmentsRandomized( temp );
+		predictionSet = new ArrayList<>( randomizedSegs );
 		goodHypotheses = new ArrayList< LabelingSegment >();
 		badHypotheses = new ArrayList< LabelingSegment >();
 	}
 
-
 	private List< ValuePair< LabelingSegment, Integer > > getAllSegsWithIdAndTime() {
 		List< List< LabelingSegment > > allSegsAllTime = new ArrayList< List< LabelingSegment > >( labelingFrames.getSegments() );
-		List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = new ArrayList<>();
-
+		List< ValuePair< LabelingSegment, Integer > > allSegsWithIdAndTime = new ArrayList<>();
 		for ( int time = 0; time < allSegsAllTime.size(); time++ ) {
 			for ( LabelingSegment ls : allSegsAllTime.get( time ) ) {
-				segsWithIdAndTime.add( new ValuePair< LabelingSegment, Integer >( ls, time ) );
+				allSegsWithIdAndTime.add( new ValuePair< LabelingSegment, Integer >( ls, time ) );
 			}
 		}
-		return segsWithIdAndTime;
+		return allSegsWithIdAndTime;
 	}
 
-	private void getAllSegmentsRandomized( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int k ) {
-		for ( int dispHyp = 0; dispHyp < k; dispHyp++ ) {
-			Random rand = new Random();
-			int randId = rand.nextInt( segsWithIdAndTime.size() );
-			randomizedAllHypotheses.add( segsWithIdAndTime.get( randId ).getA() );
-			randomizedHypothesesTimeIndices.add( segsWithIdAndTime.get( randId ).getB() );
-			segsWithIdAndTime.remove( randId );
-
+	private List< LabelingSegment > getAllSegmentsRandomized(
+			List< LabelingSegment > segs ) {
+		List< LabelingSegment > randomizedSegs = new ArrayList<>();
+		int[] ind = Utils.uniqueRand( segs.size(), segs.size() );
+		for ( int i : ind ) {
+			randomizedSegs.add( segs.get( i ) );
 		}
+		return randomizedSegs;
 	}
 
 	public void setTrainingSetForDisplay() {
-		trainSetForThisIter = new ArrayList<>( randomizedAllHypotheses );
-		trainSetTimeForThisIter = new ArrayList<>( randomizedHypothesesTimeIndices );
+		trainSetTimeForThisIter = new ArrayList<>();
+		for ( LabelingSegment labelingSegment : predictionSet ) {
+			trainSetTimeForThisIter.add( findTimeIndexOfQueriedSegemt( labelingSegment ) );
+		}
 		displaySegmentCount = -1;
 	}
 
-	private void selectSegmentForDisplay() throws Exception {
+	public void selectSegmentForDisplay() throws Exception {
 		if ( goodHypotheses.size() < 1 || badHypotheses.size() < 1 ) {
 			//No need to do intermediate prediction as if there is no instance of one class, everything will be predicted to other class
 			displayNextSegment();
@@ -341,7 +338,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			} else if ( alMode == "random" ) {
 				List< LabelingSegment > allSegments = new ArrayList<>( predictionSet );
 				if ( allSegments.isEmpty() ) {
-					System.out.println( "Empty costs!" );
+					System.out.println( "Empty!" );
 				}
 				Random rand = new Random();
 				int n = rand.nextInt( allSegments.size() );
@@ -358,10 +355,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private void displayNextSegment() {
 		displaySegmentCount = displaySegmentCount + 1;
 
-		if ( displaySegmentCount < trainSetForThisIter.size() ) {
-			showSeg( trainSetForThisIter.get( displaySegmentCount ) );
+		if ( displaySegmentCount < predictionSet.size() ) {
+			showSeg( predictionSet.get( displaySegmentCount ) );
 		} else {
-			modifyPredictionSet(); //Is it needed anymore?
 			JOptionPane.showMessageDialog( null, "Finished classifying all hypotheses..." );
 		}
 	}
@@ -444,12 +440,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			costs.put( segment, 100d ); //Setting positive costs (aggressive) instead of 0 to ensure bad hypotheses are never selected by optimization
 		}
 		System.out.println( "Size of costs updated:" + costs.size() );
-		System.out.println( "Size of labels:" + randomizedAllHypotheses.size() );
 
 		return costs;
 	}
 
-	public Map< LabelingSegment, Double > computeIntermediateCosts( List< LabelingSegment > predHyp ) { //costs needs to be local
+	public Map< LabelingSegment, Double > computeIntermediateCosts( List< LabelingSegment > predHyp ) {
 		Map< LabelingSegment, Double > localCosts = rf.predict( predHyp );
 		System.out.println( "Size of costs:" + localCosts.size() );
 		return localCosts;
@@ -458,7 +453,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	@Override
 	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -470,7 +464,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private int findTimeIndexOfQueriedSegemt( LabelingSegment segment ) {
-		return randomizedHypothesesTimeIndices.get( randomizedAllHypotheses.indexOf( segment ) );
+		return allSegsTime.get( allSegs.indexOf( segment ) );
+	}
+
+	public void setAllSegAndCorrespTime() {
+		allSegs = new ArrayList<>();
+		allSegsTime = new ArrayList<>();
+		List< ValuePair< LabelingSegment, Integer > > ete = getAllSegsWithIdAndTime();
+		for ( ValuePair< LabelingSegment, Integer > valuePair : ete ) {
+			allSegs.add( valuePair.getA() );
+			allSegsTime.add( valuePair.getB() );
+		}
+		
 	}
 
 }

@@ -196,7 +196,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void actionFetchForManualClassify() {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
-		model.randomizeSegmentHypotheses();
+		model.setAllSegAndCorrespTime();
+		model.randomizeSegmentsAndPrepData();
 		model.getTrainingData();
 	}
 

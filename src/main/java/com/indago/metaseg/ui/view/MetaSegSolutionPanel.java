@@ -84,7 +84,11 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	@Override
 	public void actionPerformed( final ActionEvent e ) {
 		if ( e.getSource().equals( btnContinueMetatrain ) ) {
-			actionContinueMetaTrain();
+			try {
+				actionContinueMetaTrain();
+			} catch ( Exception e1 ) {
+				e1.printStackTrace();
+			}
 		} else if ( e.getSource().equals( btnExport ) ) {
 			actionExportCurrentSolution();
 		}
@@ -110,9 +114,11 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 	}
 
-	private void actionContinueMetaTrain() {
+	private void actionContinueMetaTrain() throws Exception {
 		MetaSegLog.segmenterLog.info( "Starting MetaSeg optimization..." );
 		model.getModel().getMainPanel().getTabs().setSelectedComponent( model.getModel().getMainPanel().getTabTraining() );
+		model.getModel().getCostTrainerModel().setTrainingSetForDisplay();
+		model.getModel().getCostTrainerModel().selectSegmentForDisplay();
 
 	}
 }
