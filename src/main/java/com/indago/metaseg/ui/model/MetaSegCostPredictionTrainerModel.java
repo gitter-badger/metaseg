@@ -7,13 +7,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -62,19 +59,14 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private final List< RandomAccessibleInterval< IntType > > imgs = new ArrayList<>();
 	private final List< BdvSource > bdvSources = new ArrayList<>();
 	private final List< BdvOverlay > overlays = new ArrayList<>();
-	private final List< BdvSource > bdvOverlaySources = new ArrayList<>();
 	private List< LabelingSegment > randomizedAllHypotheses; // Stores all hypotheses in a randomized order
-	private List< Integer > randomizedHypothesesTimeIndices; // Stores all hypotheses in a randomized order
+	private List< Integer > randomizedHypothesesTimeIndices; // Stores all hypotheses time points
 	private List< LabelingSegment > goodHypotheses;
 	private List< LabelingSegment > badHypotheses;
-	private List< LabelingSegment > trainingSet;
 	private List< LabelingSegment > predictionSet;
-	private List< LabelingSegment > uncertainSegments;
 	private int maxHypothesisSize = 1000; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 16;
 	private MetaSegRandomForestClassifier rf;
-	private boolean quit;
-	private boolean continueActiveLearning = false;
 	private int displaySegmentCount;
 	private List< LabelingSegment > trainSetForThisIter;
 	private List< Integer > trainSetTimeForThisIter;
@@ -104,6 +96,26 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 
 		return labelingFrames;
+	}
+
+	public void setMaxPixelComponentSize( int maxValue ) {
+		maxHypothesisSize = maxValue;
+	}
+
+	public void setMinPixelComponentSize( int minValue ) {
+		minHypothesisSize = minValue;
+	}
+
+	public int getMaxPixelComponentSize() {
+		return maxHypothesisSize;
+	}
+
+	public int getMinPixelComponentSize() {
+		return minHypothesisSize;
+	}
+
+	public void setALMode( String mode ) {
+		alMode = mode;
 	}
 
 	public ConflictGraph< LabelingSegment > getConflictGraph( final int t ) {
@@ -178,20 +190,15 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
-				if ( quit == false ) {
-					goodHypotheses.add( labelingSegment );
-					lastClassifiedSegmentClass = "good";
-					undoSteps = 0;
-					modifyTrainingSet( labelingSegment ); //maybe it can go away
-					modifyPredictionSet();
-					MetaSegLog.log.info( "Added as good segment!" );
-					try {
-						selectSegmentForDisplay();
-					} catch ( Exception e1 ) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-//					displayNextSegment();
+				goodHypotheses.add( labelingSegment );
+				lastClassifiedSegmentClass = "good";
+				undoSteps = 0;
+				modifyPredictionSet();
+				MetaSegLog.log.info( "Added as good segment!" );
+				try {
+					selectSegmentForDisplay();
+				} catch ( Exception e1 ) {
+					e1.printStackTrace();
 				}
 
 			}
@@ -202,22 +209,17 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
-				if ( quit == false ) {
-					badHypotheses.add( labelingSegment );
-					lastClassifiedSegmentClass = "bad";
-					undoSteps = 0;
-					modifyTrainingSet( labelingSegment );
-					modifyPredictionSet();
-					MetaSegLog.log.info( "Added as bad segment!" );
-					try {
-						selectSegmentForDisplay();
-					} catch ( Exception e1 ) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-//					displayNextSegment();
-				}
 
+				badHypotheses.add( labelingSegment );
+				lastClassifiedSegmentClass = "bad";
+				undoSteps = 0;
+				modifyPredictionSet();
+				MetaSegLog.log.info( "Added as bad segment!" );
+				try {
+					selectSegmentForDisplay();
+				} catch ( Exception e1 ) {
+					e1.printStackTrace();
+				}
 			}
 
 		} );
@@ -252,21 +254,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 		} );
 
-		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_Q, 0 ), "Quit", new AbstractAction() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-
-				modifyPredictionSet();
-				undoSteps = 0;
-				MetaSegLog.log.info( "Quitting classifying hypotheses..." );
-				quitShowingTrainSegment();
-
-			}
-
-
-		} );
-
 	};
 
 	public void registerKeyBinding( KeyStroke keyStroke, String name, Action action ) {
@@ -285,25 +272,14 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		overlays.clear();
 
 		bdvAdd( parentModel.getRawData(), "RAW" );
-//		final int bdvTime = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
-
-	}
-
-	private void quitShowingTrainSegment() { //this should go away for compute solution functionality
-		bdvRemoveAll();
-		bdvAdd( parentModel.getRawData(), "RAW" );
-		quit = true;
-		JOptionPane
-				.showMessageDialog( null, "Quitting manual classification step..." );
 	}
 
 	public void randomizeSegmentHypotheses() {
 		List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime = getAllSegsWithIdAndTime();
 		int totalHypotheses = segsWithIdAndTime.size();
-		randomizedHypothesesTimeIndices = new ArrayList< Integer >();
+		randomizedHypothesesTimeIndices = new ArrayList< Integer >(); //Set pred set to segsWithIdAndTime. Remove this and randomize in setTrainingSetForDisplay
 		randomizedAllHypotheses = new ArrayList< LabelingSegment >();
 		getAllSegmentsRandomized( segsWithIdAndTime, totalHypotheses );
-		trainingSet = new ArrayList<>();
 		predictionSet = new ArrayList<>( randomizedAllHypotheses );
 		goodHypotheses = new ArrayList< LabelingSegment >();
 		badHypotheses = new ArrayList< LabelingSegment >();
@@ -322,74 +298,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return segsWithIdAndTime;
 	}
 
-	private List< LabelingSegment > extractDataForActiveLearningLoop() {
-		List< LabelingSegment > uncertain_segments = null;
-		double uncertaintyLB; 
-		double uncertaintyUB;
-		if ( alMode == "random" ) {
-			List< LabelingSegment > all_segments = new ArrayList<>();
-			List< LabelingSegment > keys = new ArrayList( costs.keySet() );
-			Collections.shuffle( keys );
-			for ( LabelingSegment o : keys ) {
-				// Access keys/values in a random order
-				all_segments.add( o );
-			}
-			List< LabelingSegment > diff = all_segments
-					.stream()
-					.filter( e -> !goodHypotheses.contains( e ) )
-					.collect( Collectors.toList() );
-			uncertain_segments = diff
-					.stream()
-					.filter( e -> !badHypotheses.contains( e ) )
-					.collect( Collectors.toList() );
-			if ( uncertain_segments.isEmpty() ) {
-				System.out.println( "Empty costs!" );
-			}
-
-		} else if ( alMode == "active learning (normal)" ) {
-			if ( !costs.isEmpty() ) {
-
-				uncertaintyLB = -0.8d;
-				uncertaintyUB = -0.2d;
-				uncertain_segments = getSegmnetsByUncertaintyProbability( uncertaintyLB, uncertaintyUB );
-				MetaSegLog.log.info( "showig uncertain hypotheses." );
-			} else {
-				System.out.println( "Empty costs!" );
-			}
-
-		} else if ( alMode == "active learning (class balance)" ) {
-			if ( !costs.isEmpty() ) {
-				if ( goodHypotheses.size() >= badHypotheses.size() ) {
-					uncertaintyLB = -0.49d;
-					uncertaintyUB = -0.2d;
-					MetaSegLog.log.info( "showig more of likely bad hypotheses." );
-				} else {
-					uncertaintyLB = -0.8d;
-					uncertaintyUB = -0.51d;
-					MetaSegLog.log.info( "showig more of likely good hypotheses." );
-				}
-				uncertain_segments = getSegmnetsByUncertaintyProbability( uncertaintyLB, uncertaintyUB );
-			} else {
-				System.out.println( "Empty costs!" );
-			}
-
-		}
-
-		return uncertain_segments;
-	}
-
-	private List< LabelingSegment > getSegmnetsByUncertaintyProbability( double uncertaintyLB, double uncertaintyUB ) {
-		List< LabelingSegment > uncertain_segments;
-		uncertain_segments = costs
-				.entrySet()
-				.stream()
-				.filter( entry -> ( entry.getValue() > uncertaintyLB && entry.getValue() < uncertaintyUB ) )
-				.map( Entry::getKey )
-				.collect( Collectors.toList() );
-		System.out.println( uncertain_segments.size() );
-		return uncertain_segments;
-	}
-
 	private void getAllSegmentsRandomized( List< ValuePair< LabelingSegment, Integer > > segsWithIdAndTime, int k ) {
 		for ( int dispHyp = 0; dispHyp < k; dispHyp++ ) {
 			Random rand = new Random();
@@ -402,14 +310,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public void setTrainingSetForDisplay() {
-
-		if ( continueActiveLearning == false ) {
-			trainSetForThisIter = new ArrayList<>( randomizedAllHypotheses );
-			trainSetTimeForThisIter = new ArrayList<>( randomizedHypothesesTimeIndices );
-		} else {
-			trainSetForThisIter = new ArrayList<>( uncertainSegments );
-			trainSetTimeForThisIter = findTimeIndicesOfUncertainSegemts();
-		}
+		trainSetForThisIter = new ArrayList<>( randomizedAllHypotheses );
+		trainSetTimeForThisIter = new ArrayList<>( randomizedHypothesesTimeIndices );
 		displaySegmentCount = -1;
 	}
 
@@ -436,18 +338,41 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 					uncertaintyUB = -0.51d;
 				}
 				chosenSeg = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
+			} else if ( alMode == "random" ) {
+				List< LabelingSegment > allSegments = new ArrayList<>( predictionSet );
+				if ( allSegments.isEmpty() ) {
+					System.out.println( "Empty costs!" );
+				}
+				Random rand = new Random();
+				int n = rand.nextInt( allSegments.size() );
+				chosenSeg = allSegments.get( n );
 			}
-			displaySelectedSegment( chosenSeg ); //Modify this appropriately to display the chosen segment, maybe create another method with different arguments 
+			displaySelectedSegment( chosenSeg );
 		}
 	}
 
-	private void displaySelectedSegment( LabelingSegment chosenSeg ) { //Can be removed later or modified to accomodate displaynextSegment()
+	private void displaySelectedSegment( LabelingSegment chosenSeg ) { //Can be removed later or modified to accommodate displaynextSegment()
+		showSeg( chosenSeg );
+	}
+
+	private void displayNextSegment() {
+		displaySegmentCount = displaySegmentCount + 1;
+
+		if ( displaySegmentCount < trainSetForThisIter.size() ) {
+			showSeg( trainSetForThisIter.get( displaySegmentCount ) );
+		} else {
+			modifyPredictionSet(); //Is it needed anymore?
+			JOptionPane.showMessageDialog( null, "Finished classifying all hypotheses..." );
+		}
+	}
+
+	private void showSeg( LabelingSegment chosenSeg ) {
 		bdvRemoveAll();
 		bdvAdd( parentModel.getRawData(), "RAW" );
 		final int c = 1;
 		final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
-		LabelingSegment segment = trainSetForThisIter.get( displaySegmentCount );
-		Integer time = trainSetTimeForThisIter.get( displaySegmentCount );
+		LabelingSegment segment = chosenSeg;
+		Integer time = findTimeIndexOfQueriedSegemt( segment );
 
 		IterableRegion< ? > region = segment.getRegion();
 
@@ -465,8 +390,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		bdvHandlePanel.getViewerPanel().setTimepoint( time );
 		bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
 		installBehaviour( segment );
-
 	}
+
 
 	private LabelingSegment pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) {
 		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.15 * predictionSet.size() ), predictionSet.size() );
@@ -478,7 +403,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			id = id + 1;
 			List< LabelingSegment > hypothesisSet = new ArrayList<>();
 			hypothesisSet.add( predHyp );
-			Map< LabelingSegment, Double > segAndCost = computePredictedCosts( hypothesisSet );
+			Map< LabelingSegment, Double > segAndCost = computeIntermediateCosts( hypothesisSet );
 			cost = segAndCost.get( predHyp );
 
 		}
@@ -486,63 +411,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return predHyp;
 	}
 
-
-	private void displayNextSegment() {
-		displaySegmentCount = displaySegmentCount + 1;
-
-		if ( displaySegmentCount < trainSetForThisIter.size() ) {
-			bdvRemoveAll();
-			bdvAdd( parentModel.getRawData(), "RAW" );
-			final int c = 1;
-			final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
-			LabelingSegment segment = trainSetForThisIter.get( displaySegmentCount );
-			Integer time = trainSetTimeForThisIter.get( displaySegmentCount );
-
-			IterableRegion< ? > region = segment.getRegion();
-
-			IntervalView< IntType > retSlice =
-					Views.hyperSlice(
-							hypothesisImage,
-							parentModel.getTimeDimensionIndex(),
-							time );
-			try {
-				Regions.sample( region, retSlice ).forEach( t -> t.set( c ) );
-
-			} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
-				MetaSegLog.log.error( aiaob );
-			}
-			bdvHandlePanel.getViewerPanel().setTimepoint( time );
-			bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
-			installBehaviour( segment );
-		} else {
-			modifyPredictionSet();
-			JOptionPane.showMessageDialog( null, "Finished classifying all hypotheses..." );
-		}
-
-	}
-
-	private void modifyTrainingSet( LabelingSegment segment ) { //Maybe not needed
-		trainingSet.add( segment );
-	}
-
 	private void modifyPredictionSet() {
-		predictionSet.removeAll( trainingSet );
-	}
-
-	public void setMaxPixelComponentSize( int maxValue ) {
-		maxHypothesisSize = maxValue;
-	}
-
-	public void setMinPixelComponentSize( int minValue ) {
-		minHypothesisSize = minValue;
-	}
-
-	public int getMaxPixelComponentSize() {
-		return maxHypothesisSize;
-	}
-
-	public int getMinPixelComponentSize() {
-		return minHypothesisSize;
+		predictionSet.removeAll( goodHypotheses );
+		predictionSet.removeAll( badHypotheses );
 	}
 
 	public void startTrainingPhase() throws Exception {
@@ -563,7 +434,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		rf.train();
 	}
 
-	public Map< LabelingSegment, Double > computePredictedCosts( List< LabelingSegment > predHyp ) { //Make it with input argument
+	public Map< LabelingSegment, Double > computeAllCosts() { //Maybe needs to go away
 		costs = rf.predict( predictionSet );
 		System.out.println( "Size of costs:" + costs.size() );
 		for ( LabelingSegment segment : goodHypotheses ) {
@@ -578,6 +449,12 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return costs;
 	}
 
+	public Map< LabelingSegment, Double > computeIntermediateCosts( List< LabelingSegment > predHyp ) { //costs needs to be local
+		Map< LabelingSegment, Double > localCosts = rf.predict( predHyp );
+		System.out.println( "Size of costs:" + localCosts.size() );
+		return localCosts;
+	}
+
 
 	@Override
 	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
@@ -585,43 +462,15 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return null;
 	}
 
-	public void setQuit( boolean b ) {
-		quit = b;
-
-	}
-
-	public void setIterateActiveLearningLoop( boolean b ) {
-		continueActiveLearning = b;
-	}
-
 	public void getTrainingData() {
-		if ( continueActiveLearning ) {
-			uncertainSegments = extractDataForActiveLearningLoop();
-			setTrainingSetForDisplay();
-			displayNextSegment();
-
-		} else {
-			setTrainingSetForDisplay();
-			JOptionPane
-					.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
-			displayNextSegment();
-
-		}
+		setTrainingSetForDisplay();
+		JOptionPane
+				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
+		displayNextSegment();
 	}
 
-
-	private List< Integer > findTimeIndicesOfUncertainSegemts() {
-		List< Integer > uncertainSetTimeIndices = new ArrayList<>();
-		for ( LabelingSegment segment : uncertainSegments ) {
-			int ind = randomizedAllHypotheses.indexOf( segment );
-			uncertainSetTimeIndices.add( randomizedHypothesesTimeIndices.get( ind ) );
-		}
-		return uncertainSetTimeIndices;
+	private int findTimeIndexOfQueriedSegemt( LabelingSegment segment ) {
+		return randomizedHypothesesTimeIndices.get( randomizedAllHypotheses.indexOf( segment ) );
 	}
-
-	public void setALMode( String mode ) {
-		alMode = mode;
-	}
-
 
 }

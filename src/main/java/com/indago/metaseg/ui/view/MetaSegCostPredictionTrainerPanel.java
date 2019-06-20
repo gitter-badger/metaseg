@@ -23,7 +23,6 @@ import javax.swing.JTextField;
 
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
-import com.indago.metaseg.ui.util.Utils;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
@@ -47,8 +46,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JTextField txtMinPixelComponentSize;
 
 	private JButton btnComputeSoln;
-
-	private JButton btnContinueActiveLearning;
 
 	private ButtonGroup trainingModeButtons;
 
@@ -111,6 +108,28 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		JRadioButton bRandom = new JRadioButton( "random" );
 		JRadioButton bActiveLearningNormal = new JRadioButton( "active learning (normal)" );
 		JRadioButton bActiveLeraningWithBalance = new JRadioButton( "active learning (class balance)" );
+		bRandom.addActionListener( new ActionListener() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setALMode( "random" );
+			}
+		} );
+		bActiveLearningNormal.addActionListener( new ActionListener() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setALMode( "active learning (normal)" );
+
+			}
+		} );
+		bActiveLeraningWithBalance.addActionListener( new ActionListener() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setALMode( "active learning (class balance)" );
+			}
+		} );
 
 		trainingModeButtons.add( bRandom );
 		trainingModeButtons.add( bActiveLearningNormal );
@@ -155,31 +174,28 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			actionFetchForManualClassify();
 		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 			try {
-				actionStartTrain();
+				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-			actionSetPredCosts();
-		} else if ( e.getSource().equals( btnContinueActiveLearning ) ) {
-			actionContinueActiveLearning();
+
 		}
 	}
 
-	private void actionSetPredCosts() {
-		MetaSegLog.log.info( "Setting predicted cost values..." );
-		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
-//		model.setPredictedCosts();
-
-	}
-
-	private void actionStartTrain() throws Exception {
-		MetaSegLog.log.info( "Starting feature extraction and classifer training..." );
+	private void actionComputeAllCostsAndRunSolver() throws Exception {
+		MetaSegLog.log.info( "Starting MetaSeg optimization..." );
+		model.bdvRemoveAll();
+		model.bdvAdd( model.getParentModel().getRawData(), "RAW" );
 		model.startTrainingPhase();
+		model.computeAllCosts();
+		model.getParentModel().getSolutionModel().run();
+		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
+		MetaSegLog.segmenterLog.info( "Done!" );
+		model.getParentModel().getSolutionModel().populateBdv();
 	}
 
 	private void actionFetchForManualClassify() {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
-		model.setQuit( false );
 		model.randomizeSegmentHypotheses();
 		model.getTrainingData();
 	}
@@ -191,20 +207,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getConflictGraphs();
 		model.getConflictCliques();
 		MetaSegLog.log.info( "Segmentation results fetched!" );
-	}
-
-	private void actionContinueActiveLearning() {
-		MetaSegLog.segmenterLog.info( "In active learning mode..." );
-		model.setIterateActiveLearningLoop( true );
-		model.setQuit( false );
-		if ( getTrainingMode() == "random" ) {
-			model.setALMode( "random" );
-		} else if ( getTrainingMode() == "active learning (normal)" ) {
-			model.setALMode( "active learning (normal)" );;
-		} else if ( getTrainingMode() == "active learning (class balance)" ) {
-			model.setALMode( "active learning (class balance)" );
-		}
-		model.getTrainingData();
 	}
 
 
@@ -240,10 +242,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			txtMinPixelComponentSize.setText( "" + model.getMinPixelComponentSize() );
 		}
 
-	}
-
-	public String getTrainingMode() {
-		return Utils.getSelectedButtonText( trainingModeButtons );
 	}
 
 }
