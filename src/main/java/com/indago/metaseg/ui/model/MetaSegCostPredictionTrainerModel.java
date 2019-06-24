@@ -278,7 +278,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 	}
 
-	public void selectSegmentForDisplay() throws Exception {
+	public void selectSegmentForDisplay() throws Exception { //safeguard against size of pred set = 0 needs checking
 		if ( goodHypotheses.size() < 1 || badHypotheses.size() < 1 ) {
 			//No need to do intermediate prediction as if there is no instance of one class, everything will be predicted to other class
 			displaySelectedSegment( predictionSet.get( 0 ) );
@@ -355,21 +355,26 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 
-	private LabelingSegment pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) {
-		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.15 * predictionSet.size() ), predictionSet.size() );
+	private LabelingSegment pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) { //safeguard against size of pred set = 0 needs checking
+		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.1 * predictionSet.size() ), predictionSet.size() );
 		int id = 0;
 		double cost;
 		LabelingSegment predHyp;
 		do {
 			predHyp = predictionSet.get( potentIds[ id ] );
-			id = id + 1;
-			List< LabelingSegment > hypothesisSet = new ArrayList<>();
-			hypothesisSet.add( predHyp );
-			Map< LabelingSegment, Double > segAndCost = computeIntermediateCosts( hypothesisSet );
-			cost = segAndCost.get( predHyp );
-
+			if(id<potentIds.length-1) {
+				id = id + 1;
+				List< LabelingSegment > hypothesisSet = new ArrayList<>();
+				hypothesisSet.add( predHyp );
+				Map< LabelingSegment, Double > segAndCost = computeIntermediateCosts( hypothesisSet );
+				cost = segAndCost.get( predHyp );
+			} else { //break the loop if id exhausts and then show a random segment
+				MetaSegLog.log.info( "Segment for class balance not found, falling back to random mode for this iteration..." );
+				displaySelectedSegment( predictionSet.get( 0 ) );
+				break;
+			}
 		}
-		while ( cost > uncertaintyLB && cost < uncertaintyUB );
+		while ( !( cost > uncertaintyLB && cost < uncertaintyUB ) );
 		return predHyp;
 	}
 
@@ -398,7 +403,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public Map< LabelingSegment, Double > computeAllCosts() { //Maybe needs to go away
 		costs = rf.predict( predictionSet );
-		System.out.println( "Size of costs:" + costs.size() );
 		for ( LabelingSegment segment : goodHypotheses ) {
 			costs.put( segment, -1d );
 		}
@@ -412,7 +416,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public Map< LabelingSegment, Double > computeIntermediateCosts( List< LabelingSegment > predHyp ) {
 		Map< LabelingSegment, Double > localCosts = rf.predict( predHyp );
-		System.out.println( "Size of costs:" + localCosts.size() );
 		return localCosts;
 	}
 
