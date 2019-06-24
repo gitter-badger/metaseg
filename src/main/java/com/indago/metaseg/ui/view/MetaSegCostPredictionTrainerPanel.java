@@ -96,15 +96,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelFetch.add( txtMinPixelComponentSize, "growx, wrap" );
 		panelFetch.add( btnFetch, "growx, wrap" );
 
-		final JPanel panelPrepareTrainData = new JPanel( new MigLayout() );
-		panelPrepareTrainData.setBorder( BorderFactory.createTitledBorder( "data prep" ) );
-
-		btnPrepareTrainData = new JButton( "prepare training data" );
-		btnPrepareTrainData.addActionListener( this );
-		panelPrepareTrainData.add( btnPrepareTrainData, "growx, wrap" );
-
-		final JPanel panelTrain = new JPanel( new MigLayout() );
-		panelTrain.setBorder( BorderFactory.createTitledBorder( "training" ) );
+		final JPanel panelTrainMode = new JPanel( new MigLayout() );
+		panelTrainMode.setBorder( BorderFactory.createTitledBorder( "training mode" ) );
 
 		trainingModeButtons = new ButtonGroup();
 		JRadioButton bRandom = new JRadioButton( "random" );
@@ -142,10 +135,17 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		boxContinuousRetrain = new JCheckBox( "continuous retrain" );
 		boxContinuousRetrain.addActionListener( this );
 
-		panelTrain.add( bRandom, "span 2, growx, wrap" );
-		panelTrain.add( bActiveLearningNormal, "span 2, growx, wrap" );
-		panelTrain.add( bActiveLeraningWithBalance, "span 2, gapbottom 15, growx, wrap" );
-		panelTrain.add( boxContinuousRetrain, "growx, wrap" );
+		panelTrainMode.add( bRandom, "span 2, growx, wrap" );
+		panelTrainMode.add( bActiveLearningNormal, "span 2, growx, wrap" );
+		panelTrainMode.add( bActiveLeraningWithBalance, "span 2, gapbottom 15, growx, wrap" );
+		panelTrainMode.add( boxContinuousRetrain, "growx, wrap" );
+
+		final JPanel panelPrepareTrainData = new JPanel( new MigLayout() );
+		panelPrepareTrainData.setBorder( BorderFactory.createTitledBorder( "active learning" ) );
+
+		btnPrepareTrainData = new JButton( "start" );
+		btnPrepareTrainData.addActionListener( this );
+		panelPrepareTrainData.add( btnPrepareTrainData, "growx, wrap" );
 
 		final JPanel panelCostPrediction = new JPanel( new MigLayout() );
 		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "compute" ) );
@@ -164,12 +164,13 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelUndo.add( btnUndo, "growx, wrap" );
 
 		controls.add( panelFetch, "growx, wrap" );
+		controls.add( panelTrainMode, "growx, wrap" );
 		controls.add( panelPrepareTrainData, "growx, wrap" );
-		controls.add( panelTrain, "growx, wrap" );
 		controls.add( panelCostPrediction, "growx, wrap" );
 		controls.add( panelUndo, "growx, wrap" );
 
 		bActiveLeraningWithBalance.doClick();
+		boxContinuousRetrain.doClick();
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
