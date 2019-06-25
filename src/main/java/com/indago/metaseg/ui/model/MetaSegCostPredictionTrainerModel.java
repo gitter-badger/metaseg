@@ -74,6 +74,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public String alMode;
 	private Stack< Pair< LabelingSegment, String > > undoStack = new Stack<>();
 	private boolean continuousRetrainState;
+	private boolean ongoingUndoFlag = false;
+	private Stack< Pair< LabelingSegment, String > > undoHelperStack = new Stack<>();
+	private Pair< LabelingSegment, String > poppedStatePair;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -191,6 +194,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
+
+				modifyStatesIfUndo();
 				goodHypotheses.add( labelingSegment );
 				undoStack.push( new ValuePair<>( labelingSegment, "good" ) );
 				modifyPredictionSet();
@@ -209,7 +214,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 			@Override
 			public void actionPerformed( ActionEvent e ) {
-
+				modifyStatesIfUndo();
 				badHypotheses.add( labelingSegment );
 				undoStack.push( new ValuePair<>( labelingSegment, "bad" ) );
 				modifyPredictionSet();
@@ -223,6 +228,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 		} );
 	};
+
 
 	public void registerKeyBinding( KeyStroke keyStroke, String name, Action action ) {
 
@@ -329,6 +335,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void showSeg( LabelingSegment chosenSeg ) {
+		int default_color = 0xFFD700;
+		int maxVal = 2;
 		bdvRemoveAll();
 		bdvAdd( parentModel.getRawData(), "RAW" );
 		final int c = 1;
@@ -350,7 +358,15 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			MetaSegLog.log.error( aiaob );
 		}
 		bdvHandlePanel.getViewerPanel().setTimepoint( time );
-		bdvAdd( hypothesisImage, "Classifying", 0, 7, new ARGBType( 0x00FF00 ), true );
+		if ( ongoingUndoFlag ) {
+			maxVal = 2;
+			if ( poppedStatePair.getB() == "bad" ) {
+				default_color = 0xFF0000;
+			} else {
+				default_color = 0x00FF00;
+			}
+		}
+		bdvAdd( hypothesisImage, "Classifying", 0, maxVal, new ARGBType( default_color ), true );
 		installBehaviour( segment );
 	}
 
@@ -458,8 +474,32 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public void callUndo() {
 		if ( !undoStack.isEmpty() ) {
-			final Pair< LabelingSegment, String > poppedStatePair = undoStack.pop();
+			ongoingUndoFlag = true;
+
+			poppedStatePair = undoStack.pop();
+			undoHelperStack.push( poppedStatePair );
 			displaySelectedSegment( poppedStatePair.getA() );
+
+		}
+
+	}
+
+	public void modifyStatesIfUndo() {
+		if ( ongoingUndoFlag ) {
+			String state = poppedStatePair.getB();
+			if ( state == "good" ) {
+				goodHypotheses.remove( poppedStatePair.getA() );
+			} else if ( state == "bad" ) {
+				badHypotheses.remove( poppedStatePair.getA() );
+			}
+			undoHelperStack.pop();
+			if ( !undoHelperStack.isEmpty() ) {
+				while ( undoHelperStack.size() > 0 ) {
+					Pair< LabelingSegment, String > noEdit = undoHelperStack.pop();
+					undoStack.push( noEdit );
+				}
+			}
+			ongoingUndoFlag = false;
 		}
 
 	}
