@@ -99,6 +99,20 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		tabSolution = new MetaSegSolutionPanel( model.getSolutionModel() );
 
 		// --- ASSEMBLE PANEL ---------------------------------------------------------------------
+		
+		source.getBdvHandle().getViewerPanel().addTimePointListener( t -> {
+			model.getCostTrainerModel().bdvGetHandlePanel().getBdvHandle().getViewerPanel().setTimepoint( t ); //Synchronize all panels to each other
+		} );
+		model.getCostTrainerModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> {
+			model.getSolutionModel().bdvGetHandlePanel().getViewerPanel().setTimepoint( t );
+		} );
+
+		model.getSolutionModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> {
+			model.getCostTrainerModel().bdvGetHandlePanel().getBdvHandle().getViewerPanel().setTimepoint( t ); //Synchronize all panels to each other
+		} );
+		model.getCostTrainerModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> {
+			source.getBdvHandle().getViewerPanel().setTimepoint( t );
+		} );
 
 		tabs.add( "data", tabData );
 		tabs.add( "segments", tabSegmentation );
