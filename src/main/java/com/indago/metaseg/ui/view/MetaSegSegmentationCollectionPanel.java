@@ -42,6 +42,7 @@ public class MetaSegSegmentationCollectionPanel extends JPanel {
 			if ( segPlugin.isUsable() ) {
 				model.addPlugin( segPlugin );
 				tabs.add( segPlugin.getUiName(), segPlugin.getInteractionPanel() );
+
 			}
 		}
 
