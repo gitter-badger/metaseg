@@ -17,7 +17,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
@@ -37,23 +36,15 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	MetaSegCostPredictionTrainerModel model;
 
-	private JSplitPane splitPane;
 	private JButton btnFetch;
 	private JButton btnPrepareTrainData;
-
-	private JTextField txtMaxPixelComponentSize;
-
-	private JTextField txtMinPixelComponentSize;
-
 	private JButton btnComputeSoln;
-
+	private JButton btnUndo;
 	private ButtonGroup trainingModeButtons;
 
-	private JSlider transparencySlider;
-
 	private JCheckBox boxContinuousRetrain;
-
-	private JButton btnUndo;
+	private JTextField txtMaxPixelComponentSize;
+	private JTextField txtMinPixelComponentSize;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
