@@ -15,6 +15,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
+import org.scijava.Context;
+
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
 import com.indago.metaseg.ui.util.SolutionExporter;
@@ -22,6 +24,8 @@ import com.indago.ui.util.UniversalFileChooser;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
+import net.imagej.ops.OpMatchingService;
+import net.imagej.ops.OpService;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -34,9 +38,10 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private final MetaSegSolverModel model;
 
 	private JSplitPane splitPane;
-	private JButton btnRun;
+	private JButton btnContinueMetatrain;
 
 	private JButton btnExport;
+	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
 
 	public MetaSegSolutionPanel( final MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );
@@ -56,20 +61,21 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		final MigLayout layout = new MigLayout( "", "[][grow]", "" );
 		final JPanel controls = new JPanel( layout );
 
-		final JPanel panelSolve = new JPanel( new MigLayout() );
-		panelSolve.setBorder( BorderFactory.createTitledBorder( "solver" ) );
-		btnRun = new JButton( "run" );
-		btnRun.addActionListener( this );
-		panelSolve.add( btnRun, "growx, wrap" );
-
 		final JPanel panelExport = new JPanel( new MigLayout() );
 		panelExport.setBorder( BorderFactory.createTitledBorder( "export" ) );
+
+		final JPanel panelContinueMetaTrain = new JPanel( new MigLayout() );
+		panelContinueMetaTrain.setBorder( BorderFactory.createTitledBorder( "" ) );
+		btnContinueMetatrain = new JButton( "continue meta training" );
+		btnContinueMetatrain.addActionListener( this );
+		panelContinueMetaTrain.add( btnContinueMetatrain, "growx, wrap" );
+
 
 		btnExport = new JButton( "export SEG images" );
 		btnExport.addActionListener( this );
 		panelExport.add( btnExport, "growx, wrap" );
 
-		controls.add( panelSolve, "growx, wrap" );
+		controls.add( panelContinueMetaTrain, "growx, wrap" );
 		controls.add( panelExport, "growx, wrap" );
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
@@ -82,8 +88,12 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	 */
 	@Override
 	public void actionPerformed( final ActionEvent e ) {
-		if ( e.getSource().equals( btnRun ) ) {
-			actionRun();
+		if ( e.getSource().equals( btnContinueMetatrain ) ) {
+			try {
+				actionContinueMetaTrain();
+			} catch ( Exception e1 ) {
+				e1.printStackTrace();
+			}
 		} else if ( e.getSource().equals( btnExport ) ) {
 			actionExportCurrentSolution();
 		}
@@ -109,11 +119,11 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 	}
 
-	private void actionRun() {
+	private void actionContinueMetaTrain() throws Exception {
 		MetaSegLog.segmenterLog.info( "Starting MetaSeg optimization..." );
-		model.run();
-		MetaSegLog.segmenterLog.info( "Done!" );
+		model.getModel().getMainPanel().getTabs().setSelectedComponent( model.getModel().getMainPanel().getTabTraining() );
+		model.getModel().getCostTrainerModel().setTrainingSetForDisplay();
+		model.getModel().getCostTrainerModel().selectSegmentForDisplay();
 
-		model.populateBdv();
 	}
 }

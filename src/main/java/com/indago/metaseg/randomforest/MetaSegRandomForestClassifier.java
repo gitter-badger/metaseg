@@ -34,9 +34,10 @@ public class MetaSegRandomForestClassifier {
 		attInfo.add( new Attribute( "perimeter" ) );
 		attInfo.add( new Attribute( "convexity" ) );
 		attInfo.add( new Attribute( "circularity" ) );
+		attInfo.add( new Attribute( "solidity" ) );
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
 		Instances table = new Instances( "foo bar", attInfo, 1 );
-		table.setClassIndex( 4 ); //TODO this changes depending on how many features are used, expose this in future maybe
+		table.setClassIndex( table.numAttributes() - 1 ); //TODO this changes depending on how many features are used, expose this in future maybe
 		return table;
 	}
 
@@ -105,10 +106,13 @@ public class MetaSegRandomForestClassifier {
 
 	private DenseInstance extractFeaturesFromHypotheses( LabelingSegment hypothesis, double weight, int category ) {
 		Polygon2D poly = ops.geom().contour( ( RandomAccessibleInterval ) hypothesis.getRegion(), true );
+		double area = ops.geom().size( poly ).get();
 		double perimeter = ops.geom().boundarySize( poly ).get();
 		double convexity = ops.geom().convexity( poly ).get();
 		double circularity = ops.geom().circularity( poly ).get();
-		DenseInstance ins = new DenseInstance( weight, new double[] { hypothesis.getArea(), perimeter, convexity, circularity, category } );
+		double solidity = ops.geom().solidity( poly ).get();
+
+		DenseInstance ins = new DenseInstance( weight, new double[] { area, perimeter, convexity, circularity, solidity, category } );
 		return ins;
 	}
 

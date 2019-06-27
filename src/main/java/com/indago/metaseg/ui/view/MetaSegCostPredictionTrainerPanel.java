@@ -13,16 +13,15 @@ import java.awt.event.FocusListener;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
-import com.indago.metaseg.ui.util.Utils;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
@@ -37,24 +36,15 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	MetaSegCostPredictionTrainerModel model;
 
-	private JSplitPane splitPane;
 	private JButton btnFetch;
-	private JButton btnRandCosts;
 	private JButton btnPrepareTrainData;
-
-	private JTextField txtMaxPixelComponentSize;
-
-	private JTextField txtMinPixelComponentSize;
-
-	private JButton btnStartTrain;
-
-	private JButton btnPredCosts;
-
-	private JButton btnContinueActiveLearning;
-
+	private JButton btnComputeSoln;
+	private JButton btnUndo;
 	private ButtonGroup trainingModeButtons;
 
-	private JSlider transparencySlider;
+	private JCheckBox boxContinuousRetrain;
+	private JTextField txtMaxPixelComponentSize;
+	private JTextField txtMinPixelComponentSize;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -97,54 +87,81 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelFetch.add( txtMinPixelComponentSize, "growx, wrap" );
 		panelFetch.add( btnFetch, "growx, wrap" );
 
-		final JPanel panelPrepareTrainData = new JPanel( new MigLayout() );
-		panelPrepareTrainData.setBorder( BorderFactory.createTitledBorder( "data prep" ) );
-
-		btnPrepareTrainData = new JButton( "prepare training data" );
-		btnPrepareTrainData.addActionListener( this );
-		panelPrepareTrainData.add( btnPrepareTrainData, "growx, wrap" );
-
-		final JPanel panelTrain = new JPanel( new MigLayout() );
-		panelTrain.setBorder( BorderFactory.createTitledBorder( "training" ) );
+		final JPanel panelTrainMode = new JPanel( new MigLayout() );
+		panelTrainMode.setBorder( BorderFactory.createTitledBorder( "training mode" ) );
 
 		trainingModeButtons = new ButtonGroup();
 		JRadioButton bRandom = new JRadioButton( "random" );
 		JRadioButton bActiveLearningNormal = new JRadioButton( "active learning (normal)" );
 		JRadioButton bActiveLeraningWithBalance = new JRadioButton( "active learning (class balance)" );
+		bRandom.addActionListener( new ActionListener() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setALMode( "random" );
+				boxContinuousRetrain.setSelected( false );
+			}
+		} );
+		bActiveLearningNormal.addActionListener( new ActionListener() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setALMode( "active learning (normal)" );
+				boxContinuousRetrain.setSelected( true );
+			}
+		} );
+		bActiveLeraningWithBalance.addActionListener( new ActionListener() {
+
+			@Override
+			public void actionPerformed( ActionEvent e ) {
+				model.setALMode( "active learning (class balance)" );
+				boxContinuousRetrain.setSelected( true );
+			}
+		} );
 
 		trainingModeButtons.add( bRandom );
 		trainingModeButtons.add( bActiveLearningNormal );
 		trainingModeButtons.add( bActiveLeraningWithBalance );
 
-		btnStartTrain = new JButton( "train" );
-		btnStartTrain.addActionListener( this );
-		btnContinueActiveLearning = new JButton( "continue learning" );
-		btnContinueActiveLearning.addActionListener( this );
+		boxContinuousRetrain = new JCheckBox( "continuous retrain" );
+		boxContinuousRetrain.addActionListener( this );
 
-		panelTrain.add( bRandom, "span 2, growx, wrap" );
-		panelTrain.add( bActiveLearningNormal, "span 2, growx, wrap" );
-		panelTrain.add( bActiveLeraningWithBalance, "span 2, gapbottom 15, growx, wrap" );
-		panelTrain.add( btnStartTrain, "growx, wrap" );
-		panelTrain.add( btnContinueActiveLearning, "growx, wrap" );
+		panelTrainMode.add( bRandom, "span 2, growx, wrap" );
+		panelTrainMode.add( bActiveLearningNormal, "span 2, growx, wrap" );
+		panelTrainMode.add( bActiveLeraningWithBalance, "span 2, gapbottom 15, growx, wrap" );
+		panelTrainMode.add( boxContinuousRetrain, "growx, wrap" );
+
+		final JPanel panelPrepareTrainData = new JPanel( new MigLayout() );
+		panelPrepareTrainData.setBorder( BorderFactory.createTitledBorder( "active learning" ) );
+
+		btnPrepareTrainData = new JButton( "start" );
+		btnPrepareTrainData.addActionListener( this );
+		panelPrepareTrainData.add( btnPrepareTrainData, "growx, wrap" );
 
 		final JPanel panelCostPrediction = new JPanel( new MigLayout() );
-		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "cost prediction" ) );
+		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "compute" ) );
 
-		btnRandCosts = new JButton( "set random costs" );
-		btnRandCosts.addActionListener( this );
+		btnComputeSoln = new JButton( "compute solution" );
+		btnComputeSoln.addActionListener( this );
 
-		btnPredCosts = new JButton( "set predicted costs" );
-		btnPredCosts.addActionListener( this );
+		panelCostPrediction.add( btnComputeSoln, "growx, wrap" );
 
-		panelCostPrediction.add( btnPredCosts, "growx, wrap" );
-		panelCostPrediction.add( btnRandCosts, "growx, wrap" );
+		final JPanel panelUndo = new JPanel( new MigLayout() );
+		panelUndo.setBorder( BorderFactory.createTitledBorder( "" ) );
+
+		btnUndo = new JButton( "undo" );
+		btnUndo.addActionListener( this );
+
+		panelUndo.add( btnUndo, "growx, wrap" );
 
 		controls.add( panelFetch, "growx, wrap" );
+		controls.add( panelTrainMode, "growx, wrap" );
 		controls.add( panelPrepareTrainData, "growx, wrap" );
-		controls.add( panelTrain, "growx, wrap" );
 		controls.add( panelCostPrediction, "growx, wrap" );
+		controls.add( panelUndo, "growx, wrap" );
 
 		bActiveLeraningWithBalance.doClick();
+		boxContinuousRetrain.doClick();
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
@@ -159,39 +176,47 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	public void actionPerformed( final ActionEvent e ) {
 		if (e.getSource().equals( btnFetch )) {
 			actionFetch();
-		} else
-		if (e.getSource().equals( btnRandCosts )) {
-			actionSetRandomCosts();
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
 			actionFetchForManualClassify();
-		} else if ( e.getSource().equals( btnStartTrain ) ) {
+		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 			try {
-				actionStartTrain();
+				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-		} else if ( e.getSource().equals( btnPredCosts ) ) {
-			actionSetPredCosts();
-		} else if ( e.getSource().equals( btnContinueActiveLearning ) ) {
-			actionContinueActiveLearning();
+
+		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
+			JCheckBox state = ( JCheckBox ) e.getSource();
+			if ( state.isSelected() ) {
+				model.setContinuousRetrainState( true );
+			} else {
+				model.setContinuousRetrainState( false );
+			}
+		} else if ( e.getSource().equals( btnUndo ) ) {
+			actionCallUndo();
 		}
 	}
 
-	private void actionSetPredCosts() {
-		MetaSegLog.log.info( "Setting predicted cost values..." );
-		model.setPredictedCosts();
-
+	private void actionCallUndo() {
+		model.callUndo();
 	}
 
-	private void actionStartTrain() throws Exception {
-		MetaSegLog.log.info( "Starting feature extraction and classifer training..." );
+	private void actionComputeAllCostsAndRunSolver() throws Exception {
+		MetaSegLog.log.info( "Starting MetaSeg optimization..." );
+		model.bdvRemoveAll();
+		model.bdvAdd( model.getParentModel().getRawData(), "RAW" );
 		model.startTrainingPhase();
+		model.computeAllCosts();
+		model.getParentModel().getSolutionModel().run();
+		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
+		MetaSegLog.segmenterLog.info( "Done!" );
+		model.getParentModel().getSolutionModel().populateBdv();
 	}
 
 	private void actionFetchForManualClassify() {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
-		model.setQuit( false );
-		model.randomizeSegmentHypotheses();
+		model.setAllSegAndCorrespTime();
+		model.randomizeSegmentsAndPrepData();
 		model.getTrainingData();
 	}
 
@@ -202,25 +227,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getConflictGraphs();
 		model.getConflictCliques();
 		MetaSegLog.log.info( "Segmentation results fetched!" );
-	}
-
-	private void actionSetRandomCosts() {
-		MetaSegLog.log.info( "Setting random cost values." );
-		model.setRandomSegmentCosts();
-	}
-
-	private void actionContinueActiveLearning() {
-		MetaSegLog.segmenterLog.info( "In active learning mode..." );
-		model.setIterateActiveLearningLoop( true );
-		model.setQuit( false );
-		if ( getTrainingMode() == "random" ) {
-			model.setALMode( "random" );
-		} else if ( getTrainingMode() == "active learning (normal)" ) {
-			model.setALMode( "active learning (normal)" );;
-		} else if ( getTrainingMode() == "active learning (class balance)" ) {
-			model.setALMode( "active learning (class balance)" );
-		}
-		model.getTrainingData();
 	}
 
 
@@ -256,10 +262,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			txtMinPixelComponentSize.setText( "" + model.getMinPixelComponentSize() );
 		}
 
-	}
-
-	public String getTrainingMode() {
-		return Utils.getSelectedButtonText( trainingModeButtons );
 	}
 
 }
