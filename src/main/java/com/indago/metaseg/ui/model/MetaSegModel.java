@@ -138,7 +138,12 @@ public class MetaSegModel implements AutoCloseable {
 	 */
 	public RandomAccessibleInterval< DoubleType > getFrame( final long t ) {
 		final int timeIdx = ImglibUtil.getTimeDimensionIndex( this.imgRaw );
-		return Views.hyperSlice( this.imgRaw, timeIdx, this.imgRaw.min( timeIdx ) + t );
+		if ( timeIdx == -1 ) {
+			return this.imgRaw;
+		} else {
+			return Views.hyperSlice( this.imgRaw, timeIdx, this.imgRaw.min( timeIdx ) + t );
+		}
+
 	}
 
 	public int getNumberOfSpatialDimensions() {
@@ -165,5 +170,9 @@ public class MetaSegModel implements AutoCloseable {
 
 	public long getTimeIndex( final int t ) {
 		return t + imgRaw.min( ImglibUtil.getTimeDimensionIndex( this.imgRaw ) );
+	}
+	
+	public boolean is2D() {
+		return is2D;
 	}
 }
