@@ -36,6 +36,9 @@ import bdv.util.BdvHandlePanel;
 import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealLocalizable;
+import net.imglib2.RealPositionable;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.Regions;
 import net.imglib2.type.NativeType;
@@ -82,7 +85,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
 		costs = new HashMap<>();
-
 	}
 
 	public MetaSegModel getParentModel() {
@@ -330,7 +332,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void displaySelectedSegment( LabelingSegment chosenSeg ) { //Can be removed later or modified to accommodate displaynextSegment()
-
 		showSeg( chosenSeg );
 	}
 
@@ -345,9 +346,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		Integer time = findTimeIndexOfQueriedSegemt( segment );
 
 		IterableRegion< ? > region = segment.getRegion();
-
 		IntervalView< IntType > retSlice =
-				Views.hyperSlice(
+				Views.hyperSlice(  //Doesn't work if 3D image has only one time point
 						hypothesisImage,
 						parentModel.getTimeDimensionIndex(),
 						time );
@@ -358,6 +358,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			MetaSegLog.log.error( aiaob );
 		}
 		bdvHandlePanel.getViewerPanel().setTimepoint( time );
+		setZSlice( segment ); //only for 3d
 		if ( ongoingUndoFlag ) {
 			maxVal = 2;
 			if ( poppedStatePair.getB() == "bad" ) {
@@ -368,6 +369,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		bdvAdd( hypothesisImage, "Classifying", 0, maxVal, new ARGBType( default_color ), true );
 		installBehaviour( segment );
+	}
+
+	private void setZSlice( LabelingSegment segment ) {
+		if ( parentModel.is2D() == false ) { //only for 3d
+			final AffineTransform3D transform = new AffineTransform3D();
+			bdvHandlePanel.getViewerPanel().getState().getViewerTransform( transform );
+			RealLocalizable source = segment.getCenterOfMass();
+			RealPositionable target = ( RealPositionable ) segment.getCenterOfMass(); //Just a copy but it will be replaced after applying transform
+			transform.apply( source, target );
+			transform.translate( 0, 0, -segment.getCenterOfMass().getDoublePosition( 2 ) );
+			bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
+		}
 	}
 
 
@@ -408,6 +421,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	private void extractFeatures() throws Exception {
 		rf = new MetaSegRandomForestClassifier();
+		rf.setIs2D( parentModel.is2D() );
 		rf.buildRandomForest();
 		rf.initializeTrainingData( goodHypotheses, badHypotheses );
 		trainForest( rf );
