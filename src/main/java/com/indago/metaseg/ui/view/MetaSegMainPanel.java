@@ -80,9 +80,9 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		// === TAB DATA ===========================================================================
 		tabs = new JTabbedPane();
 		tabData = new JPanel( new BorderLayout() );
-		if ( model.getNumberOfSpatialDimensions() == 2 ) {
+		if ( model.is2D() ) {
 			bdvData = new BdvHandlePanel( frame, Bdv.options().is2D().inputTriggerConfig( model.getDefaultInputTriggerConfig() ) );
-		} else if ( model.getNumberOfSpatialDimensions() == 3 ) {
+		} else {
 			bdvData = new BdvHandlePanel( frame, Bdv.options().inputTriggerConfig( model.getDefaultInputTriggerConfig() ) );
 		} //This gives 2D/3D bdv panel for data
 		tabData.add( bdvData.getViewerPanel(), BorderLayout.CENTER );

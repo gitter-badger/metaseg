@@ -54,12 +54,12 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
-		if ( model.getParentModel().getNumberOfSpatialDimensions() == 2 ) {
+		if ( model.getParentModel().is2D() ) {
 			model.bdvSetHandlePanel(
 					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
 							.options()
 							.is2D() ) );
-		} else if ( model.getParentModel().getNumberOfSpatialDimensions() == 3 ) {
+		} else {
 			model.bdvSetHandlePanel(
 					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
 							.options() ) );

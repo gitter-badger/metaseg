@@ -51,12 +51,12 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
-		if ( model.getModel().getNumberOfSpatialDimensions() == 2 ) {
+		if ( model.getModel().is2D() ) {
 			model.bdvSetHandlePanel(
 					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
 							.options()
 							.is2D() ) );
-		} else if ( model.getModel().getNumberOfSpatialDimensions() == 3 ) {
+		} else {
 			model.bdvSetHandlePanel(
 					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
 							.options() ) );
