@@ -93,8 +93,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public LabelingFrames getLabelings() {
 		if ( this.labelingFrames == null ) {
-			System.out.println( "Entered!" );
-			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
+			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE ); //TODO check if fetching is correct
 			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
 			labelingFrames.setMinSegmentSize( minHypothesisSize );
 			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
@@ -346,11 +345,23 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		Integer time = findTimeIndexOfQueriedSegemt( segment );
 
 		IterableRegion< ? > region = segment.getRegion();
-		IntervalView< IntType > retSlice =
-				Views.hyperSlice(  //Doesn't work if 3D image has only one time point
-						hypothesisImage,
-						parentModel.getTimeDimensionIndex(),
-						time );
+		IntervalView< IntType > retSlice;
+		if ( parentModel.getNumberOfFrames() > 1 ) {
+			retSlice =
+					Views.hyperSlice(
+							hypothesisImage,
+							parentModel.getTimeDimensionIndex(),
+							time );
+		} else {
+			long[] mininterval = new long[ hypothesisImage.numDimensions() ];
+			long[] maxinterval = new long[ hypothesisImage.numDimensions() ];
+			for ( int i = 0; i < mininterval.length - 1; i++ ) {
+				mininterval[ i ] = hypothesisImage.min( i );
+				maxinterval[ i ] = hypothesisImage.max( i );
+			}
+			retSlice = Views.interval( hypothesisImage, mininterval, maxinterval );
+		}
+
 		try {
 			Regions.sample( region, retSlice ).forEach( t -> t.set( c ) );
 
@@ -382,7 +393,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
 		}
 	}
-
 
 	private LabelingSegment pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) { //safeguard against size of pred set = 0 needs checking
 		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.1 * predictionSet.size() ), predictionSet.size() );
