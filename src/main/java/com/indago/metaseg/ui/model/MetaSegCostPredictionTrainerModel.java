@@ -37,7 +37,7 @@ import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealLocalizable;
-import net.imglib2.RealPositionable;
+import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.Regions;
@@ -387,9 +387,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			final AffineTransform3D transform = new AffineTransform3D();
 			bdvHandlePanel.getViewerPanel().getState().getViewerTransform( transform );
 			RealLocalizable source = segment.getCenterOfMass();
-			RealPositionable target = ( RealPositionable ) segment.getCenterOfMass(); //Just a copy but it will be replaced after applying transform
+			RealPoint target = new RealPoint( 3 );
 			transform.apply( source, target );
-			transform.translate( 0, 0, -segment.getCenterOfMass().getDoublePosition( 2 ) );
+			transform.translate( 0, 0, -target.getDoublePosition( 2 ) );
 			bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
 		}
 	}
