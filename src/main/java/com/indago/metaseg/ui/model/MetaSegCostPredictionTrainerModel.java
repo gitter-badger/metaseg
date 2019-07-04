@@ -36,6 +36,9 @@ import bdv.util.BdvHandlePanel;
 import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealLocalizable;
+import net.imglib2.RealPoint;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.Regions;
 import net.imglib2.type.NativeType;
@@ -82,7 +85,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
 		costs = new HashMap<>();
-
 	}
 
 	public MetaSegModel getParentModel() {
@@ -91,8 +93,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public LabelingFrames getLabelings() {
 		if ( this.labelingFrames == null ) {
-			System.out.println( "Entered!" );
-			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
+			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE ); //TODO check if fetching is correct
 			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
 			labelingFrames.setMinSegmentSize( minHypothesisSize );
 			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
@@ -330,7 +331,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void displaySelectedSegment( LabelingSegment chosenSeg ) { //Can be removed later or modified to accommodate displaynextSegment()
-
 		showSeg( chosenSeg );
 	}
 
@@ -345,12 +345,23 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		Integer time = findTimeIndexOfQueriedSegemt( segment );
 
 		IterableRegion< ? > region = segment.getRegion();
+		IntervalView< IntType > retSlice;
+		if ( parentModel.getNumberOfFrames() > 1 ) {
+			retSlice =
+					Views.hyperSlice(
+							hypothesisImage,
+							parentModel.getTimeDimensionIndex(),
+							time );
+		} else {
+			long[] mininterval = new long[ hypothesisImage.numDimensions() ];
+			long[] maxinterval = new long[ hypothesisImage.numDimensions() ];
+			for ( int i = 0; i < mininterval.length - 1; i++ ) {
+				mininterval[ i ] = hypothesisImage.min( i );
+				maxinterval[ i ] = hypothesisImage.max( i );
+			}
+			retSlice = Views.interval( hypothesisImage, mininterval, maxinterval );
+		}
 
-		IntervalView< IntType > retSlice =
-				Views.hyperSlice(
-						hypothesisImage,
-						parentModel.getTimeDimensionIndex(),
-						time );
 		try {
 			Regions.sample( region, retSlice ).forEach( t -> t.set( c ) );
 
@@ -358,6 +369,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			MetaSegLog.log.error( aiaob );
 		}
 		bdvHandlePanel.getViewerPanel().setTimepoint( time );
+		setZSlice( segment ); //only for 3d
 		if ( ongoingUndoFlag ) {
 			maxVal = 2;
 			if ( poppedStatePair.getB() == "bad" ) {
@@ -370,6 +382,17 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		installBehaviour( segment );
 	}
 
+	private void setZSlice( LabelingSegment segment ) {
+		if ( parentModel.is2D() == false ) { //only for 3d
+			final AffineTransform3D transform = new AffineTransform3D();
+			bdvHandlePanel.getViewerPanel().getState().getViewerTransform( transform );
+			RealLocalizable source = segment.getCenterOfMass();
+			RealPoint target = new RealPoint( 3 );
+			transform.apply( source, target );
+			transform.translate( 0, 0, -target.getDoublePosition( 2 ) );
+			bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
+		}
+	}
 
 	private LabelingSegment pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) { //safeguard against size of pred set = 0 needs checking
 		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.1 * predictionSet.size() ), predictionSet.size() );
@@ -408,6 +431,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	private void extractFeatures() throws Exception {
 		rf = new MetaSegRandomForestClassifier();
+		rf.setIs2D( parentModel.is2D() );
 		rf.buildRandomForest();
 		rf.initializeTrainingData( goodHypotheses, badHypotheses );
 		trainForest( rf );

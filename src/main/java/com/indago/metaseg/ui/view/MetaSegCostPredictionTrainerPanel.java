@@ -54,12 +54,16 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
-
-		model.bdvSetHandlePanel(
-				new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-						.options()
-						.is2D() ) );
-
+		if ( model.getParentModel().is2D() ) {
+			model.bdvSetHandlePanel(
+					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
+							.options()
+							.is2D() ) );
+		} else {
+			model.bdvSetHandlePanel(
+					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
+							.options() ) );
+		} //This gives 2D/3D bdv panel for meta-training
 		viewer.add( model.bdvGetHandlePanel().getViewerPanel(), BorderLayout.CENTER );
 		model.populateBdv();
 

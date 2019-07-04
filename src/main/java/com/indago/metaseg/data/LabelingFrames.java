@@ -82,10 +82,16 @@ public class LabelingFrames {
 				for ( final RandomAccessibleInterval< IntType > sumimg : segmentHypothesesImages ) {
 					// hyperslize sum_img to desired frame
 					final long[] offset = new long[ sumimg.numDimensions() ];
-					offset[ model.getModel().getTimeDimensionIndex() ] = frameId;
-					final IntervalView< IntType > sumImgFrame = Views.offset(
-							Views.hyperSlice( sumimg, model.getModel().getTimeDimensionIndex(), frameId ),
-							offset );
+					final IntervalView< IntType > sumImgFrame;
+					if ( model.getModel().getTimeDimensionIndex() == -1 ) {
+						sumImgFrame = Views.offset( sumimg, offset );
+					} else {
+						offset[ model.getModel().getTimeDimensionIndex() ] = frameId;
+						sumImgFrame = Views.offset(
+								Views.hyperSlice( sumimg, model.getModel().getTimeDimensionIndex(), frameId ),
+								offset );
+					}
+
 					// build component tree on frame
 					final FilteredComponentTree< IntType > tree =
 							FilteredComponentTree.buildComponentTree(

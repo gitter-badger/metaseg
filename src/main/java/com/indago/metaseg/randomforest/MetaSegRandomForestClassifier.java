@@ -9,9 +9,9 @@ import java.util.Map;
 import org.scijava.Context;
 
 import com.indago.data.segmentation.LabelingSegment;
-import com.indago.metaseg.data.LabelingFrames;
 
 import hr.irb.fastRandomForest.FastRandomForest;
+import net.imagej.mesh.Mesh;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.imglib2.RandomAccessibleInterval;
@@ -26,7 +26,7 @@ public class MetaSegRandomForestClassifier {
 	private FastRandomForest forest;
 	
 	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
-
+	private boolean is2D;
 
 	private static Instances newTable() {
 		ArrayList< Attribute > attInfo = new ArrayList<>();
@@ -37,7 +37,7 @@ public class MetaSegRandomForestClassifier {
 		attInfo.add( new Attribute( "solidity" ) );
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
 		Instances table = new Instances( "foo bar", attInfo, 1 );
-		table.setClassIndex( table.numAttributes() - 1 ); //TODO this changes depending on how many features are used, expose this in future maybe
+		table.setClassIndex( table.numAttributes() - 1 );
 		return table;
 	}
 
@@ -68,26 +68,7 @@ public class MetaSegRandomForestClassifier {
 		forest.buildClassifier( trainingData );
 	}
 
-
-	public Map< LabelingSegment, Double > predict( LabelingFrames labelingFrames ) {  //TODO Change here to only use prediction set for cost prediction
-		Map< LabelingSegment, Double > costs = new HashMap<>();
-		Instances testData = newTable();
-		for ( int t = 0; t < labelingFrames.getNumFrames(); t++ ) {
-			for ( final LabelingSegment segment : labelingFrames.getSegments( t ) ) {
-				DenseInstance ins = extractFeaturesFromHypotheses( segment, 1, 0 );
-				ins.setDataset( testData );
-				try {
-					double prob = forest.distributionForInstance( ins )[1];
-					costs.put( segment, -prob );
-				} catch ( Exception e ) {
-					e.printStackTrace();
-				}
-			}
-		}
-		return costs;
-	}
-
-	public Map< LabelingSegment, Double > predict( List< LabelingSegment > predictionSet ) {  //TODO Change here to only use prediction set for cost prediction
+	public Map< LabelingSegment, Double > predict( List< LabelingSegment > predictionSet ) {
 		Map< LabelingSegment, Double > costs = new HashMap<>();
 		Instances testData = newTable();
 		for ( final LabelingSegment segment : predictionSet ) {
@@ -105,15 +86,32 @@ public class MetaSegRandomForestClassifier {
 	}
 
 	private DenseInstance extractFeaturesFromHypotheses( LabelingSegment hypothesis, double weight, int category ) {
-		Polygon2D poly = ops.geom().contour( ( RandomAccessibleInterval ) hypothesis.getRegion(), true );
-		double area = ops.geom().size( poly ).get();
-		double perimeter = ops.geom().boundarySize( poly ).get();
-		double convexity = ops.geom().convexity( poly ).get();
-		double circularity = ops.geom().circularity( poly ).get();
-		double solidity = ops.geom().solidity( poly ).get();
-
+		double area;
+		double perimeter;
+		double convexity;
+		double circularity;
+		double solidity;
+		if ( is2D ) {
+			Polygon2D poly = ops.geom().contour( ( RandomAccessibleInterval ) hypothesis.getRegion(), true );
+			area = ops.geom().size( poly ).get();
+			perimeter = ops.geom().boundarySize( poly ).get();
+			convexity = ops.geom().convexity( poly ).get();
+			circularity = ops.geom().circularity( poly ).get();
+			solidity = ops.geom().solidity( poly ).get();
+		} else {
+			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
+			area = ops.geom().size( mesh ).get();
+			perimeter = ops.geom().boundarySize( mesh ).get();
+			convexity = ops.geom().convexity( mesh ).get();
+			circularity = ops.geom().sphericity( mesh ).get();
+			solidity = ops.geom().solidity( mesh ).get();
+		}
 		DenseInstance ins = new DenseInstance( weight, new double[] { area, perimeter, convexity, circularity, solidity, category } );
 		return ins;
+	}
+
+	public void setIs2D( boolean b ) {
+		is2D = b;
 	}
 
 }

@@ -17,6 +17,7 @@ import bdv.util.BdvOverlay;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealLocalizable;
 import net.imglib2.realtransform.AffineTransform2D;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.real.DoubleType;
 
 /**
@@ -43,6 +44,7 @@ public class MetaSegSolutionOverlay extends BdvOverlay {
 		if ( pgSolution != null ) {
 			drawCOMs( g );
 		}
+
 	}
 
 	private void drawCOMs( final Graphics2D g ) {
@@ -61,8 +63,16 @@ public class MetaSegSolutionOverlay extends BdvOverlay {
 		if ( pgSolution == null ) return;
 		// otherwise...
 		try {
-			final AffineTransform2D trans = new AffineTransform2D();
-			getCurrentTransform2D( trans );
+			final int nSpatialDims = model.getModel().getNumberOfSpatialDimensions();
+			AffineTransform3D trans3D = null;
+			AffineTransform2D trans2D = null;
+			if ( nSpatialDims == 3 ) {
+				trans3D = new AffineTransform3D();
+				getCurrentTransform3D( trans3D );
+			} else if ( nSpatialDims == 2 ) {
+				trans2D = new AffineTransform2D();
+				getCurrentTransform2D( trans2D );
+			}
 
 			RandomAccessibleInterval< DoubleType > frame = model.getRawData();
 			long t = 0;
@@ -74,18 +84,21 @@ public class MetaSegSolutionOverlay extends BdvOverlay {
 			for ( final SegmentNode segvar : problem.getSegments() ) {
 				if ( pgSolution.getAssignment( segvar ) == 1 || problem.getEditState().isAvoided( segvar ) ) {
 					final RealLocalizable com = segvar.getSegment().getCenterOfMass();
-					final int nSpatialDims = model.getModel().getNumberOfSpatialDimensions();
 					final double[] lpos = new double[ nSpatialDims ];
 					final double[] gpos = new double[ nSpatialDims ];
 					com.localize( lpos );
-					trans.apply( lpos, gpos );
+					if ( nSpatialDims == 3 ) {
+						trans3D.apply( lpos, gpos );
+					} else if ( nSpatialDims == 2 ) {
+						trans2D.apply( lpos, gpos );
+					}
 
 					double zDistToCOM = 0;
 					if ( nSpatialDims == 3 ) {
-						zDistToCOM = Math.abs( lpos[ 2 ] - t );
+						zDistToCOM = Math.abs( gpos[ 2 ] - t );
 					}
 
-					// Only show nearby stuff...
+//					 Only show nearby stuff...
 					if ( zDistToCOM > 1. ) {
 						continue;
 					}
@@ -109,6 +122,7 @@ public class MetaSegSolutionOverlay extends BdvOverlay {
 					}
 				}
 			}
+
 		} catch ( final ArrayIndexOutOfBoundsException aioobe ) {
 			// do not bother, this happens only during threaded re-computations while the UI would love to point something that is currently invalid
 //			System.out.println( "" );
