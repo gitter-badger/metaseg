@@ -1,5 +1,6 @@
 import javax.swing.JOptionPane;
 
+import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.command.ContextCommand;
 import org.scijava.log.Logger;
@@ -18,7 +19,7 @@ import net.imagej.ops.OpService;
  * @author Florian Jug
  */
 
-@Plugin( type = ContextCommand.class, headless = false, menuPath = "Plugins > Tracking > Tr2d" )
+@Plugin( type = Command.class, menuPath = "Plugins > Segmentation > Metaseg" )
 public class MetasegPlugin implements Command {
 
 	@Parameter
@@ -38,7 +39,7 @@ public class MetasegPlugin implements Command {
 		final boolean gurobiWorks = GurobiInstaller.install();
 
 		if(gurobiWorks) {
-			final MetaSegApplication app = new MetaSegApplication();
+			final MetaSegApplication app = new MetaSegApplication(opService, tr2dSegmentationPluginService, log);
 			try {
 				app.run( null );
 			} catch ( final NoClassDefFoundError err ) {
