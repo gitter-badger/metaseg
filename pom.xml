@@ -19,7 +19,7 @@
 
 	<groupId>com.indago</groupId>
 	<artifactId>metaseg</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.1.0</version>
 
 	<name>metaseg</name>
 	<description>Meta-segmentation tool for joining many segmentation 
@@ -159,7 +159,8 @@
 		<connection>scm:git:git://github.com/TrNdy/metaseg</connection>
 		<developerConnection>scm:git:git@github.com:TrNdy/metaseg</developerConnection>
 		<url>https://github.com/TrNdy/metaseg</url>
-	</scm>
+	  <tag>metaseg-0.1.0</tag>
+  </scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
 		<url>https://github.com/TrNdy/metaseg/issues</url>
