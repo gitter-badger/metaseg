@@ -5,25 +5,21 @@
 	<parent>
 		<groupId>sc.fiji</groupId>
 		<artifactId>pom-indago</artifactId>
-		<version>2.2.16</version>
+		<version>2.2.18</version>
 	</parent>
 
 	<properties>
+		<package-name>com.indago.metaseg</package-name>
 		<license.licenseName>Simplified BSD License</license.licenseName>
 		<license.copyrightOwners>DAIS developers</license.copyrightOwners>
 
 		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
 		<releaseProfiles>deploy-to-imagej</releaseProfiles>
-		
-		<Indago.version>0.1.11-SNAPSHOT</Indago.version>
-		<IndagoSegmentationImportPlugin.version>0.1.5-SNAPSHOT</IndagoSegmentationImportPlugin.version>
-		<IndagoWekaSegmenterPlugin.version>0.1.5-SNAPSHOT</IndagoWekaSegmenterPlugin.version>
-		<IndagoLabkitSegmentationPlugin.version>0.1.9-SNAPSHOT</IndagoLabkitSegmentationPlugin.version>
 	</properties>
 
 	<groupId>com.indago</groupId>
 	<artifactId>metaseg</artifactId>
-	<version>0.1-SNAPSHOT</version>
+	<version>0.1.0-SNAPSHOT</version>
 
 	<name>metaseg</name>
 	<description>Meta-segmentation tool for joining many segmentation 
@@ -92,7 +88,7 @@
 			<groupId>com.apple</groupId>
 			<artifactId>AppleJavaExtensions</artifactId>
 		</dependency>
-		
+
 		<!-- SEGMENTATION PLUGINS -->
 		<dependency>
 			<groupId>com.indago</groupId>
