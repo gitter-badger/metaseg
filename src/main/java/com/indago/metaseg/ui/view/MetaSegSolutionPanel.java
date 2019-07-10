@@ -128,7 +128,6 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private void actionContinueMetaTrain() throws Exception {
 		MetaSegLog.segmenterLog.info( "Starting MetaSeg optimization..." );
 		model.getModel().getMainPanel().getTabs().setSelectedComponent( model.getModel().getMainPanel().getTabTraining() );
-		model.getModel().getCostTrainerModel().setTrainingSetForDisplay();
 		model.getModel().getCostTrainerModel().selectSegmentForDisplay();
 
 	}
