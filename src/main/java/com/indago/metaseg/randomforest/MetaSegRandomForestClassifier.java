@@ -14,19 +14,67 @@ import hr.irb.fastRandomForest.FastRandomForest;
 import net.imagej.mesh.Mesh;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
+import net.imagej.ops.geom.geom2d.DefaultCircularity;
+import net.imagej.ops.geom.geom2d.DefaultContour;
+import net.imagej.ops.geom.geom2d.DefaultConvexityPolygon;
+import net.imagej.ops.geom.geom2d.DefaultPerimeterLength;
+import net.imagej.ops.geom.geom2d.DefaultSizePolygon;
+import net.imagej.ops.geom.geom2d.DefaultSolidityPolygon;
+import net.imagej.ops.geom.geom3d.DefaultConvexityMesh;
+import net.imagej.ops.geom.geom3d.DefaultSolidityMesh;
+import net.imagej.ops.geom.geom3d.DefaultSphericity;
+import net.imagej.ops.geom.geom3d.DefaultSurfaceArea;
+import net.imagej.ops.geom.geom3d.DefaultVolumeMesh;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.roi.geom.real.Polygon2D;
+import net.imglib2.type.logic.NativeBoolType;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instances;
 
 public class MetaSegRandomForestClassifier {
 
+	private DefaultSolidityPolygon polygonSolidityOp;
+	private DefaultSolidityMesh meshSolidityOp;
+	private DefaultConvexityPolygon polygonConvexityOp;
+	private DefaultConvexityMesh meshConvexityOp;
+	private DefaultSizePolygon polygonAreaOp;
+	private DefaultVolumeMesh meshAreaOp;
+	private DefaultPerimeterLength polygonPerimeterOp;
+	private DefaultSurfaceArea meshPerimeterOp;
+	private DefaultCircularity polygonCircularityOp;
+	private DefaultSphericity meshCircularityOp;
+	private DefaultContour buildPolygoneOp;
+
+	public MetaSegRandomForestClassifier( boolean is2D ) {
+		this.is2D = is2D;
+		prematchOps();
+	}
+
+	private void prematchOps() {
+		Img< NativeBoolType > image2d = ArrayImgs.booleans( new boolean[] { true }, 1, 1 );
+		buildPolygoneOp = ops.op( DefaultContour.class, image2d, true );
+		Polygon2D poly = buildPolygoneOp.calculate( image2d );
+		Mesh mesh = ops.geom().marchingCubes( ArrayImgs.booleans( new boolean[] { true }, 1, 1, 1 ) );
+		polygonSolidityOp = ops.op( DefaultSolidityPolygon.class, poly );
+		meshSolidityOp = ops.op( DefaultSolidityMesh.class, mesh );
+		polygonConvexityOp = ops.op( DefaultConvexityPolygon.class, poly );
+		meshConvexityOp = ops.op( DefaultConvexityMesh.class, mesh );
+		polygonAreaOp = ops.op( DefaultSizePolygon.class, poly );
+		meshAreaOp = ops.op( DefaultVolumeMesh.class, mesh );
+		polygonPerimeterOp = ops.op( DefaultPerimeterLength.class, poly );
+		meshPerimeterOp = ops.op( DefaultSurfaceArea.class, mesh );
+		polygonCircularityOp = ops.op( DefaultCircularity.class, poly );
+		meshCircularityOp = ops.op( DefaultSphericity.class, mesh );
+	}
+
 	private Instances trainingData;
 	private FastRandomForest forest;
 	
 	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
-	private boolean is2D;
+	private final boolean is2D;
 
 	private static Instances newTable() {
 		ArrayList< Attribute > attInfo = new ArrayList<>();
@@ -92,26 +140,21 @@ public class MetaSegRandomForestClassifier {
 		double circularity;
 		double solidity;
 		if ( is2D ) {
-			Polygon2D poly = ops.geom().contour( ( RandomAccessibleInterval ) hypothesis.getRegion(), true );
-			area = ops.geom().size( poly ).get();
-			perimeter = ops.geom().boundarySize( poly ).get();
-			convexity = ops.geom().convexity( poly ).get();
-			circularity = ops.geom().circularity( poly ).get();
-			solidity = ops.geom().solidity( poly ).get();
+			Polygon2D poly = buildPolygoneOp.calculate( hypothesis.getRegion() );
+			area = polygonAreaOp.calculate( poly ).get();
+			perimeter = polygonPerimeterOp.calculate( poly ).get();
+			convexity = polygonConvexityOp.calculate( poly ).get();
+			circularity = polygonCircularityOp.calculate( poly ).get();
+			solidity = polygonSolidityOp.calculate( poly ).get();
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
-			area = ops.geom().size( mesh ).get();
-			perimeter = ops.geom().boundarySize( mesh ).get();
-			convexity = ops.geom().convexity( mesh ).get();
-			circularity = ops.geom().sphericity( mesh ).get();
-			solidity = ops.geom().solidity( mesh ).get();
+			area = meshAreaOp.calculate( mesh ).get();
+			perimeter = meshPerimeterOp.calculate( mesh ).get();
+			convexity = meshConvexityOp.calculate( mesh ).get();
+			circularity = meshCircularityOp.calculate( mesh ).get();
+			solidity = meshSolidityOp.calculate( mesh ).get();
 		}
 		DenseInstance ins = new DenseInstance( weight, new double[] { area, perimeter, convexity, circularity, solidity, category } );
 		return ins;
 	}
-
-	public void setIs2D( boolean b ) {
-		is2D = b;
-	}
-
 }

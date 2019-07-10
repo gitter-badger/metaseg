@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -270,11 +271,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	private List< LabelingSegment > getAllSegmentsRandomized(
 			List< LabelingSegment > segs ) {
-		List< LabelingSegment > randomizedSegs = new ArrayList<>();
-		int[] ind = Utils.uniqueRand( segs.size(), segs.size() );
-		for ( int i : ind ) {
-			randomizedSegs.add( segs.get( i ) );
-		}
+		List< LabelingSegment > randomizedSegs = new ArrayList<>( segs );
+		Collections.shuffle( randomizedSegs );
 		return randomizedSegs;
 	}
 
@@ -430,8 +428,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void extractFeatures() throws Exception {
-		rf = new MetaSegRandomForestClassifier();
-		rf.setIs2D( parentModel.is2D() );
+		rf = new MetaSegRandomForestClassifier( parentModel.is2D() );
 		rf.buildRandomForest();
 		rf.initializeTrainingData( goodHypotheses, badHypotheses );
 		trainForest( rf );
