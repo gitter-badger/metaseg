@@ -503,9 +503,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		if ( ongoingUndoFlag ) {
 			String state = poppedStatePair.getB();
 			if ( state == "good" ) {
-				goodHypotheses.remove( poppedStatePair.getA().getA() );
+				goodHypotheses.remove( poppedStatePair.getA() );
 			} else if ( state == "bad" ) {
-				badHypotheses.remove( poppedStatePair.getA().getA() );
+				badHypotheses.remove( poppedStatePair.getA() );
 			}
 			undoHelperStack.pop();
 			if ( !undoHelperStack.isEmpty() ) {
