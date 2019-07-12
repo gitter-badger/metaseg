@@ -8,6 +8,7 @@ import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -26,6 +27,7 @@ import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
+import net.imglib2.RealPoint;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -39,14 +41,18 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 	private JSplitPane splitPane;
 	private JButton btnContinueMetatrain;
-
+	private JButton btnActivateLevEdit;
 	private JButton btnExport;
+
+	private List< RealPoint > neighbors;
+	private RealPoint mousePointer;
 	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
 
 	public MetaSegSolutionPanel( final MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );
 		this.model = solutionModel;
 		buildGui();
+
 	}
 
 	private void buildGui() {
@@ -76,12 +82,18 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		btnContinueMetatrain.addActionListener( this );
 		panelContinueMetaTrain.add( btnContinueMetatrain, "growx, wrap" );
 
+		final JPanel panelLeveragedEditing = new JPanel( new MigLayout() );
+		panelLeveragedEditing.setBorder( BorderFactory.createTitledBorder( "leveraged editing" ) );
+		btnActivateLevEdit = new JButton( "activate lev. edit mode" );
+		btnActivateLevEdit.addActionListener( this );
+		panelLeveragedEditing.add( btnActivateLevEdit, "growx, wrap" );
 
 		btnExport = new JButton( "export SEG images" );
 		btnExport.addActionListener( this );
 		panelExport.add( btnExport, "growx, wrap" );
 
 		controls.add( panelContinueMetaTrain, "growx, wrap" );
+		controls.add( panelLeveragedEditing, "growx, wrap" );
 		controls.add( panelExport, "growx, wrap" );
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
@@ -102,9 +114,16 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 			}
 		} else if ( e.getSource().equals( btnExport ) ) {
 			actionExportCurrentSolution();
+		} else if ( e.getSource().equals( btnActivateLevEdit ) ) {
+			actionActivateLevEdit();
 		}
 	}
 
+
+	private void actionActivateLevEdit() {
+		MetaSegLog.segmenterLog.info( "Starting levergaed editing mode..." );
+		model.estimateMouseContainingSegment();
+	}
 
 	private void actionExportCurrentSolution() {
 		MetaSegLog.segmenterLog.info( "Exporting SEG compatible images..." );
