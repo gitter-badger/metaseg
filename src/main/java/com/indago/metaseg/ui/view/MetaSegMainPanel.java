@@ -50,12 +50,14 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 	private JPanel tabSegmentation;
 	private JPanel tabTraining;
 	private JPanel tabSolution;
+	private JPanel tabLevEditing;
 
 	private BdvHandlePanel bdvData;
 
 	private JSplitPane splitPane;
 
 	private final LoggingPanel logPanel;
+
 
 	public MetaSegMainPanel( final Frame frame, final MetaSegModel model ) {
 		super( new BorderLayout( 5, 5 ) );
@@ -101,6 +103,9 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 
 		// === TAB SOLUTION =======================================================================
 		tabSolution = new MetaSegSolutionPanel( model.getSolutionModel() );
+		
+		// === TAB LEVERAGED-EDITING =======================================================================
+		tabLevEditing = new MetaSegLevEditingPanel( model.getSolutionModel() );
 
 		// --- ASSEMBLE PANEL ---------------------------------------------------------------------
 		
@@ -122,6 +127,7 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		tabs.add( "segments", tabSegmentation );
 		tabs.add( "meta training", tabTraining );
 		tabs.add( "solution", tabSolution );
+		tabs.add( "frame editor", tabLevEditing );
 		tabs.setSelectedComponent( tabTraining );
 
 		splitPane = new JSplitPane( JSplitPane.VERTICAL_SPLIT, tabs, logPanel );

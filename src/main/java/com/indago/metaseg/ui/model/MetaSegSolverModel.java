@@ -3,11 +3,7 @@
  */
 package com.indago.metaseg.ui.model;
 
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import com.indago.fg.Assignment;
@@ -18,13 +14,11 @@ import com.indago.fg.UnaryCostConstraintGraph;
 import com.indago.fg.Variable;
 import com.indago.ilp.DefaultLoggingGurobiCallback;
 import com.indago.ilp.SolveGurobi;
-import com.indago.io.DataMover;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.pg.MetaSegProblem;
 import com.indago.metaseg.ui.util.SolutionVisualizer;
 import com.indago.metaseg.ui.view.bdv.overlays.MetaSegSolutionOverlay;
 import com.indago.pg.IndicatorNode;
-import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.bdv.BdvWithOverlaysOwner;
 
 import bdv.util.BdvHandlePanel;
@@ -33,9 +27,6 @@ import bdv.util.BdvSource;
 import gurobi.GRBException;
 import net.imagej.ImgPlus;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
-import net.imglib2.roi.IterableRegion;
-import net.imglib2.roi.Regions;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
@@ -43,8 +34,6 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.Views;
 
 /**
  * @author jug
@@ -65,9 +54,6 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 	private SolveGurobi gurobiFGsolver;
 	private final List< Assignment< Variable > > fgSolutions = new ArrayList<>();
 	private final List< Assignment< IndicatorNode > > pgSolutions = new ArrayList<>();
-	private RealPoint mousePointer;
-	private List< RealPoint > neighbors;
-	private ArrayList< SegmentNode > chosenSegsInSolution;
 
 	public MetaSegSolverModel( final MetaSegModel metaSegModel ) {
 		this.model = metaSegModel;
@@ -184,7 +170,6 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 	@Override
 	public void bdvSetHandlePanel( final BdvHandlePanel bdvHandlePanel ) {
 		this.bdvHandlePanel = bdvHandlePanel;
-		bdvHandlePanel.getViewerPanel().getDisplay().addHandler( new MouseOver() );
 	}
 
 	/**
@@ -251,86 +236,6 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 
 	public MetaSegModel getModel() {
 		return model;
-	}
-
-	public void estimateMouseContainingSegment() {
-		for ( int neighbor = 0; neighbor < Math.min( 1, neighbors.size() ); neighbor++ ) {
-			RealPoint candidateCentroid = neighbors.get( neighbor );
-			for ( SegmentNode node : chosenSegsInSolution ) {
-				if ( candidateCentroid.getDoublePosition( 0 ) == node.getSegment().getCenterOfMass().getDoublePosition( 0 ) ) {
-					displayInEditMode( node );
-				}
-			}
-		}
-
-	}
-
-	private void displayInEditMode( SegmentNode node ) {
-		final RandomAccessibleInterval< IntType > ret =
-				DataMover.createEmptyArrayImgLike( getRawData(), new IntType() );
-		for ( int t = 0; t < getModel().getNumberOfFrames(); t++ ) {
-			final IntervalView< IntType > imgSolution = Views.hyperSlice( ret, getModel().getTimeDimensionIndex(), t );
-			final IterableRegion< ? > region = node.getSegment().getRegion();
-			final int c = 1;
-			try {
-				Regions.sample( region, imgSolution ).forEach( pixel -> pixel.set( c ) );
-			} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
-				MetaSegLog.log.error( aiaob );
-			}
-		}
-
-		bdvAdd( ret, "edit", 0, 2, new ARGBType( 0xFFFF00 ), true );
-	}
-
-	private class MouseOver implements MouseMotionListener {
-
-		@Override
-		public void mouseDragged( MouseEvent e ) {}
-
-		@Override
-		public void mouseMoved( MouseEvent e ) {
-			neighbors = getSortedNeighbors();
-			System.out.println( "Nearest neighbor centroid is:" + neighbors.get( 0 ) );
-			estimateMouseContainingSegment();
-
-		}
-
-		private List< RealPoint > getSortedNeighbors() {
-			mousePointer = new RealPoint( 3 );
-			bdvGetHandlePanel().getViewerPanel().getGlobalMouseCoordinates( mousePointer );
-			int time = bdvGetHandlePanel().getViewerPanel().getState().getCurrentTimepoint();
-			Assignment< IndicatorNode > solution = getPgSolution( time );
-			chosenSegsInSolution = new ArrayList<>();
-			List< RealPoint > centroids = new ArrayList<>();
-			for ( final SegmentNode segVar : getProblems().get( time ).getSegments() ) {
-				if ( solution.getAssignment( segVar ) == 1 ) {
-					chosenSegsInSolution.add( segVar );
-					centroids.add( new RealPoint( segVar.getSegment().getCenterOfMass() ) );
-				}
-			}
-			Collections.sort( centroids, createComparator( mousePointer ) );
-			return centroids;
-		}
-
-		private final Comparator< RealPoint > createComparator( RealPoint p ) {
-			final RealPoint finalP = p;
-			return new Comparator< RealPoint >() {
-
-				@Override
-				public int compare( RealPoint p0, RealPoint p1 ) {
-					double ds0 = Math.pow( ( p0.getDoublePosition( 0 ) - finalP.getDoublePosition( 0 ) ), 2 ) + Math.pow(
-							( p0.getDoublePosition( 0 ) - finalP
-									.getDoublePosition( 0 ) ),
-							2 );
-					double ds1 = Math.pow( ( p1.getDoublePosition( 0 ) - finalP.getDoublePosition( 0 ) ), 2 ) + Math.pow(
-							( p1.getDoublePosition( 0 ) - finalP
-									.getDoublePosition( 0 ) ),
-							2 );
-					return Double.compare( ds0, ds1 );
-				}
-			};
-		}
-
 	}
 
 }
