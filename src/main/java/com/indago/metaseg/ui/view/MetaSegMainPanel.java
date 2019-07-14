@@ -229,4 +229,8 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 	public JPanel getTabTraining() {
 		return tabTraining;
 	}
+
+	public JPanel getTabLevEdit() {
+		return tabLevEditing;
+	}
 }

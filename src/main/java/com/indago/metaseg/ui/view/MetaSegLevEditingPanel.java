@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
@@ -13,15 +15,18 @@ import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
+import com.indago.data.segmentation.LabelingSegment;
 import com.indago.fg.Assignment;
 import com.indago.io.DataMover;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
 import com.indago.metaseg.ui.util.SolutionVisualizer;
 import com.indago.pg.IndicatorNode;
+import com.indago.pg.segments.ConflictSet;
 import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.bdv.BdvWithOverlaysOwner;
 
@@ -51,10 +56,6 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 	private JButton btnForceSelect;
 	private JButton btnForceRemove;
 	private BdvHandlePanel bdvHandlePanel;
-
-	private List< RealPoint > neighbors;
-	private RealPoint mousePointer;
-	private ArrayList< SegmentNode > chosenSegsInSolution;
 	private List< BdvSource > bdvSources = new ArrayList<>();
 	private List< BdvSource > bdvOverlaySources = new ArrayList<>();
 	private List< BdvOverlay > overlays = new ArrayList<>();
@@ -65,6 +66,7 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 		buildGui();
 		bdvHandlePanel.getViewerPanel().getDisplay().addHandler( new MouseOver() );
 	}
+
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
@@ -107,57 +109,59 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 	public void actionPerformed( ActionEvent e ) {
 		if ( e.getSource().equals( btnForceSelect ) ) {
 	}else if (e.getSource().equals( btnForceRemove )) {
-		
 		}
-
-	}
-
-	public void estimateMouseContainingSegment( int time ) {
-		for ( int neighbor = 0; neighbor < Math.min( 1, neighbors.size() ); neighbor++ ) {
-			RealPoint candidateCentroid = neighbors.get( neighbor );
-			for ( SegmentNode node : chosenSegsInSolution ) {
-				if ( candidateCentroid.getDoublePosition( 0 ) == node.getSegment().getCenterOfMass().getDoublePosition( 0 ) ) {
-					displayInEditMode( node, time );
-				}
-			}
-		}
-
-	}
-
-	private void displayInEditMode( SegmentNode node, int time ) {
-		populateBdv();
-		final RandomAccessibleInterval< IntType > ret =
-				DataMover.createEmptyArrayImgLike( model.getRawData(), new IntType() );
-		final IntervalView< IntType > imgSolution = Views.hyperSlice( ret, model.getModel().getTimeDimensionIndex(), time );
-		final IterableRegion< ? > region = node.getSegment().getRegion();
-		final int c = 1;
-		try {
-			Regions.sample( region, imgSolution ).forEach( pixel -> pixel.set( c ) );
-		} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
-			MetaSegLog.log.error( aiaob );
-		}
-
-		bdvAdd( ret, "lev. edit", 0, 2, new ARGBType( 0xFFFF00 ), true );
 	}
 
 	private void populateBdv() {
 		bdvRemoveAll();
 		bdvRemoveAllOverlays();
 		overlays.clear();
-
 		bdvAdd( model.getRawData(), "RAW" );
-
 		final int bdvTime = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
 		if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
 			final RandomAccessibleInterval< IntType > imgSolution = SolutionVisualizer.drawSolutionSegmentImages( this.model );
 			bdvAdd( imgSolution, "solution", 0, 2, new ARGBType( 0x00FF00 ), true );
 		}
-
 //		bdvAdd( new MetaSegSolutionOverlay( this.model ), "overlay" );
-
 	}
 
-	private class MouseOver implements MouseListener {
+	private class MouseOver implements MouseListener, KeyListener {
+
+		private ConflictSet conflictSet = new ConflictSet();
+		private List< RealPoint > neighbors;
+		private RealPoint mousePointer;
+		private ArrayList< SegmentNode > chosenSegsInSolution;
+		private SegmentNode selectedSegmentNode;
+		private int selectedIndex;
+
+		private void estimateMouseContainingSegmentAndShow( int time ) {
+			for ( int neighbor = 0; neighbor < Math.min( 1, neighbors.size() ); neighbor++ ) {
+				RealPoint candidateCentroid = neighbors.get( neighbor );
+				for ( SegmentNode node : chosenSegsInSolution ) {
+					if ( candidateCentroid.getDoublePosition( 0 ) == node.getSegment().getCenterOfMass().getDoublePosition( 0 ) ) {
+						selectedSegmentNode = node;
+						displayInEditMode( selectedSegmentNode.getSegment(), time );
+					}
+				}
+			}
+
+		}
+
+		private void displayInEditMode( LabelingSegment labelingSegment, int time ) {
+			populateBdv();
+			final RandomAccessibleInterval< IntType > ret =
+					DataMover.createEmptyArrayImgLike( model.getRawData(), new IntType() );
+			final IntervalView< IntType > imgSolution = Views.hyperSlice( ret, model.getModel().getTimeDimensionIndex(), time );
+			final IterableRegion< ? > region = labelingSegment.getRegion();
+			final int c = 1;
+			try {
+				Regions.sample( region, imgSolution ).forEach( pixel -> pixel.set( c ) );
+			} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
+				MetaSegLog.log.error( aiaob );
+			}
+			bdvAdd( ret, "lev. edit", 0, 2, new ARGBType( 0x00BFFF ), true );
+			bdvHandlePanel.getViewerPanel().setTimepoint( time );
+		}
 
 		private List< RealPoint > getSortedNeighbors( int time ) {
 			mousePointer = new RealPoint( 3 );
@@ -200,7 +204,18 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 				int time = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
 				neighbors = getSortedNeighbors( time );
 				System.out.println( "Nearest neighbor centroid is:" + neighbors.get( 0 ) );
-				estimateMouseContainingSegment( time );
+				estimateMouseContainingSegmentAndShow( time );
+				findConflictSets( time );
+				JComponent component = ( JComponent ) e.getSource();
+				component.setToolTipText( "Number of conflicting segments for selected: " + conflictSet.size() );
+			}
+		}
+
+		private void findConflictSets( int time ) {
+			conflictSet.removeAll( conflictSet );
+			if ( !( selectedSegmentNode == null ) ) {
+				conflictSet = model.getProblem( time ).getConflictSetFor( selectedSegmentNode );
+				setSelectedIndex( conflictSet.indexOf( selectedSegmentNode ) );
 			}
 		}
 
@@ -215,6 +230,37 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 
 		@Override
 		public void mouseExited( MouseEvent e ) {}
+
+		@Override
+		public void keyTyped( KeyEvent e ) {}
+
+		@Override
+		public void keyPressed( KeyEvent e ) {
+			if ( e.getKeyCode() == KeyEvent.VK_UP ) {
+				if ( conflictSet.size() > 1 ) {
+					if ( selectedIndex == conflictSet.size() - 1 ) {
+						setSelectedIndex( 0 );
+					} else {
+						setSelectedIndex( selectedIndex + 1 );
+					}
+					displayInEditMode(
+							conflictSet.get( selectedIndex ).getSegment(),
+							bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
+				}
+
+			}
+		}
+
+		private void setSelectedIndex( int i ) {
+			selectedIndex = i;
+		}
+
+
+		@Override
+		public void keyReleased( KeyEvent e ) {
+			// TODO Auto-generated method stub
+
+		}
 
 	}
 
