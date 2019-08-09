@@ -44,6 +44,11 @@
 			<artifactId>scifio</artifactId>
 		</dependency>
 		<dependency>
+    		<groupId>org.ojalgo</groupId>
+    		<artifactId>ojalgo</artifactId>
+    		<version>47.2.0</version>
+		</dependency>
+		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-ij</artifactId>
 		</dependency>
@@ -102,6 +107,7 @@
 			<groupId>com.indago</groupId>
 			<artifactId>IndagoLabkitSegmentationPlugin</artifactId>
 		</dependency>
+		
 	</dependencies>
 
 	<developers>

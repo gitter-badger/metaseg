@@ -15,6 +15,7 @@ import com.indago.fg.Variable;
 import com.indago.ilp.DefaultLoggingGurobiCallback;
 import com.indago.ilp.SolveGurobi;
 import com.indago.metaseg.MetaSegLog;
+import com.indago.metaseg.SolveOjalgo;
 import com.indago.metaseg.pg.MetaSegProblem;
 import com.indago.metaseg.ui.util.SolutionVisualizer;
 import com.indago.metaseg.ui.view.bdv.overlays.MetaSegSolutionOverlay;
@@ -54,6 +55,7 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 	private SolveGurobi gurobiFGsolver;
 	private final List< Assignment< Variable > > fgSolutions = new ArrayList<>();
 	private final List< Assignment< IndicatorNode > > pgSolutions = new ArrayList<>();
+	private SolveOjalgo ojalgoFGSolver;
 
 	public MetaSegSolverModel( final MetaSegModel metaSegModel ) {
 		this.model = metaSegModel;
@@ -124,6 +126,8 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 		final UnaryCostConstraintGraph fg = mappedFactorGraph.getFg();
 		final AssignmentMapper< Variable, IndicatorNode > assMapper = mappedFactorGraph.getAssmntMapper();
 		try {
+			ojalgoFGSolver = new SolveOjalgo();
+			ojalgoFGSolver.solve( fg );
 			SolveGurobi.GRB_PRESOLVE = 0;
 			gurobiFGsolver = new SolveGurobi();
 			final Assignment< Variable > fgSolution = gurobiFGsolver.solve( fg, new DefaultLoggingGurobiCallback( MetaSegLog.solverLog ) );
