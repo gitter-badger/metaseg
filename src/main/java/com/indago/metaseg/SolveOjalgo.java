@@ -9,6 +9,7 @@ import org.ojalgo.optimisation.Expression;
 import org.ojalgo.optimisation.ExpressionsBasedModel;
 import org.ojalgo.optimisation.Optimisation;
 
+import com.indago.fg.Assignment;
 import com.indago.fg.Factor;
 import com.indago.fg.LinearConstraint;
 import com.indago.fg.Relation;
@@ -39,10 +40,11 @@ public class SolveOjalgo {
 	 *
 	 * @param fg
 	 *            the factor graph to be solved.
+	 * @return 
 	 * 
 	 * @return an <code>Assignment</code> containing the solution.
 	 */
-	public void solve( final UnaryCostConstraintGraph fg ) {
+	public OjalgoResult solve( final UnaryCostConstraintGraph fg ) {
 
 		if ( model != null ) {
 			// Dispose of model
@@ -119,6 +121,47 @@ public class SolveOjalgo {
 		BasicLogger.debug();
 		BasicLogger.debug( model );
 		BasicLogger.debug();
+		final int[] vals = new int[ result.size() ];
+		for ( int i = 0; i < result.size(); i++ ) {
+			vals[ i ] = Math.round( result.get( i ).floatValue() );
+		}
+		return new OjalgoResult( variableToIndex, vals, model );
+
+	}
+
+	public static class OjalgoResult implements Assignment< Variable > {
+
+		private final TObjectIntMap< Variable > variableToIndex;
+
+		private final int[] vals;
+
+		private final ExpressionsBasedModel OjalgoModel;
+
+		public OjalgoResult(
+				final TObjectIntMap< Variable > variableToIndex,
+				final int[] vals,
+				final ExpressionsBasedModel model ) {
+			this.variableToIndex = variableToIndex;
+			this.vals = vals;
+			this.OjalgoModel = model;
+		}
+
+		@Override
+		public boolean isAssigned( final Variable var ) {
+			return variableToIndex.containsKey( var );
+		}
+
+		@Override
+		public int getAssignment( final Variable var ) {
+			return vals[ variableToIndex.get( var ) ];
+		}
+
+		/**
+		 * @return the variableToIndex
+		 */
+		public TObjectIntMap< Variable > getVariableToIndex() {
+			return variableToIndex;
+		}
 	}
 
 }

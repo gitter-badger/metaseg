@@ -12,7 +12,6 @@ import com.indago.fg.FactorGraphFactory;
 import com.indago.fg.MappedFactorGraph;
 import com.indago.fg.UnaryCostConstraintGraph;
 import com.indago.fg.Variable;
-import com.indago.ilp.DefaultLoggingGurobiCallback;
 import com.indago.ilp.SolveGurobi;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.SolveOjalgo;
@@ -127,10 +126,11 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 		final AssignmentMapper< Variable, IndicatorNode > assMapper = mappedFactorGraph.getAssmntMapper();
 		try {
 			ojalgoFGSolver = new SolveOjalgo();
-			ojalgoFGSolver.solve( fg );
-			SolveGurobi.GRB_PRESOLVE = 0;
-			gurobiFGsolver = new SolveGurobi();
-			final Assignment< Variable > fgSolution = gurobiFGsolver.solve( fg, new DefaultLoggingGurobiCallback( MetaSegLog.solverLog ) );
+			final Assignment< Variable > fgSolution = ojalgoFGSolver.solve( fg );
+//			SolveGurobi.GRB_PRESOLVE = 0;
+//			gurobiFGsolver = new SolveGurobi();
+
+//			final Assignment< Variable > fgSolution = gurobiFGsolver.solve( fg, new DefaultLoggingGurobiCallback( MetaSegLog.solverLog ) );
 			final Assignment< IndicatorNode > pgSolution = assMapper.map( fgSolution );
 			return new ValuePair<>( pgSolution, fgSolution );
 		} catch ( final GRBException e ) {
