@@ -8,6 +8,7 @@ import org.ojalgo.netio.BasicLogger;
 import org.ojalgo.optimisation.Expression;
 import org.ojalgo.optimisation.ExpressionsBasedModel;
 import org.ojalgo.optimisation.Optimisation;
+import org.ojalgo.optimisation.solver.gurobi.SolverGurobi;
 
 import com.indago.fg.Assignment;
 import com.indago.fg.Factor;
@@ -19,7 +20,6 @@ import com.indago.fg.Variable;
 import gnu.trove.impl.Constants;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
-import gurobi.GRBException;
 
 public class SolveOjalgo {
 
@@ -27,7 +27,7 @@ public class SolveOjalgo {
 	private final File logFileDirectory;
 	ExpressionsBasedModel model = new ExpressionsBasedModel();
 
-	public SolveOjalgo() throws GRBException {
+	public SolveOjalgo() {
 		this( defaultLogFileDirectory );
 	}
 
@@ -51,6 +51,8 @@ public class SolveOjalgo {
 			model.dispose();
 		}
 		
+		ExpressionsBasedModel.addFallbackSolver( SolverGurobi.INTEGRATION );
+//		ExpressionsBasedModel.addPreferredSolver( SolverGurobi.INTEGRATION );
 		model = new ExpressionsBasedModel();
 		BasicLogger.debug( SolveOjalgo.class.getSimpleName() );
 		BasicLogger.debug();

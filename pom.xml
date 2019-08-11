@@ -12,6 +12,9 @@
 		<package-name>com.indago.metaseg</package-name>
 		<license.licenseName>Simplified BSD License</license.licenseName>
 		<license.copyrightOwners>DAIS developers</license.copyrightOwners>
+		<path.installation.gurobi>/Library/gurobi810</path.installation.gurobi>
+    	<path.jar.gurobi>/Library/gurobi810/mac64/lib/gurobi.jar</path.jar.gurobi>
+    	<path.native.gurobi>/Library/gurobi810/mac64/bin</path.native.gurobi>
 
 		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
 		<releaseProfiles>deploy-to-imagej</releaseProfiles>
@@ -47,6 +50,11 @@
     		<groupId>org.ojalgo</groupId>
     		<artifactId>ojalgo</artifactId>
     		<version>47.2.0</version>
+		</dependency>
+		<dependency>
+    		<groupId>org.ojalgo</groupId>
+    		<artifactId>ojalgo-gurobi</artifactId>
+    		<version>2.47.2</version>
 		</dependency>
 		<dependency>
 			<groupId>net.imglib2</groupId>
@@ -93,6 +101,13 @@
 			<groupId>com.apple</groupId>
 			<artifactId>AppleJavaExtensions</artifactId>
 		</dependency>
+		<dependency>
+            <groupId>gurobi</groupId>
+            <artifactId>gurobi</artifactId>
+            <version>8.1.0</version>
+            <scope>system</scope>
+            <systemPath>${path.jar.gurobi}</systemPath>
+        </dependency>
 
 		<!-- SEGMENTATION PLUGINS -->
 		<dependency>
