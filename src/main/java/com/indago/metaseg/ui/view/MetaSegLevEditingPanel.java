@@ -9,8 +9,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -19,6 +17,7 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
+import com.indago.data.segmentation.LabelData;
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.fg.Assignment;
 import com.indago.io.DataMover;
@@ -26,7 +25,6 @@ import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
 import com.indago.metaseg.ui.util.SolutionVisualizer;
 import com.indago.pg.IndicatorNode;
-import com.indago.pg.segments.ConflictSet;
 import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.bdv.BdvWithOverlaysOwner;
 
@@ -36,8 +34,12 @@ import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
+import net.imglib2.RealRandomAccess;
+import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.Regions;
+import net.imglib2.roi.labeling.ImgLabeling;
+import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
@@ -66,7 +68,6 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 		buildGui();
 		bdvHandlePanel.getViewerPanel().getDisplay().addHandler( new MouseOver() );
 	}
-
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
@@ -127,24 +128,13 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 
 	private class MouseOver implements MouseListener, KeyListener {
 
-		private ConflictSet conflictSet = new ConflictSet();
-		private List< RealPoint > neighbors;
 		private RealPoint mousePointer;
 		private ArrayList< SegmentNode > chosenSegsInSolution;
-		private SegmentNode selectedSegmentNode;
 		private int selectedIndex;
+		private List< LabelingSegment > segmentsUnderMouse;
 
-		private void estimateMouseContainingSegmentAndShow( int time ) {
-			for ( int neighbor = 0; neighbor < Math.min( 1, neighbors.size() ); neighbor++ ) {
-				RealPoint candidateCentroid = neighbors.get( neighbor );
-				for ( SegmentNode node : chosenSegsInSolution ) {
-					if ( candidateCentroid.getDoublePosition( 0 ) == node.getSegment().getCenterOfMass().getDoublePosition( 0 ) ) {
-						selectedSegmentNode = node;
-						displayInEditMode( selectedSegmentNode.getSegment(), time );
-					}
-				}
-			}
-
+		private void showFirstSegmentUnderMouse( int time, LabelingSegment labelingSegment ) {
+			displayInEditMode( labelingSegment, time );
 		}
 
 		private void displayInEditMode( LabelingSegment labelingSegment, int time ) {
@@ -163,60 +153,47 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 			bdvHandlePanel.getViewerPanel().setTimepoint( time );
 		}
 
-		private List< RealPoint > getSortedNeighbors( int time ) {
-			mousePointer = new RealPoint( 3 );
-			bdvHandlePanel.getViewerPanel().getGlobalMouseCoordinates( mousePointer );
-			Assignment< IndicatorNode > solution = model.getPgSolution( time );
-			chosenSegsInSolution = new ArrayList<>();
-			List< RealPoint > centroids = new ArrayList<>();
-			for ( final SegmentNode segVar : model.getProblems().get( time ).getSegments() ) {
-				if ( solution.getAssignment( segVar ) == 1 ) {
-					chosenSegsInSolution.add( segVar );
-					centroids.add( new RealPoint( segVar.getSegment().getCenterOfMass() ) );
-				}
-			}
-			Collections.sort( centroids, createComparator( mousePointer ) );
-			return centroids;
-		}
-
-		private final Comparator< RealPoint > createComparator( RealPoint p ) {
-			final RealPoint finalP = p;
-			return new Comparator< RealPoint >() {
-
-				@Override
-				public int compare( RealPoint p0, RealPoint p1 ) {
-					double ds0 = Math.pow( ( p0.getDoublePosition( 0 ) - finalP.getDoublePosition( 0 ) ), 2 ) + Math.pow(
-							( p0.getDoublePosition( 0 ) - finalP
-									.getDoublePosition( 0 ) ),
-							2 );
-					double ds1 = Math.pow( ( p1.getDoublePosition( 0 ) - finalP.getDoublePosition( 0 ) ), 2 ) + Math.pow(
-							( p1.getDoublePosition( 0 ) - finalP
-									.getDoublePosition( 0 ) ),
-							2 );
-					return Double.compare( ds0, ds1 );
-				}
-			};
-		}
-
 		@Override
 		public void mouseClicked( MouseEvent e ) {
 			if ( !model.getPgSolutions().isEmpty() && !( model.getPgSolutions() == null ) ) {
 				int time = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
-				neighbors = getSortedNeighbors( time );
-				System.out.println( "Nearest neighbor centroid is:" + neighbors.get( 0 ) );
-				estimateMouseContainingSegmentAndShow( time );
-				findConflictSets( time );
+				chosenSegsInSolution = new ArrayList<>();
+				Assignment< IndicatorNode > solution = model.getPgSolution( time );
+				for ( final SegmentNode segVar : model.getProblems().get( time ).getSegments() ) {
+					if ( solution.getAssignment( segVar ) == 1 ) {
+						chosenSegsInSolution.add( segVar );
+					}
+				}
+				ImgLabeling< LabelData, IntType > labelingFrames =
+						model.getModel().getCostTrainerModel().getLabelings().getLabelingPlusForFrame( time ).getLabeling();
+				mousePointer = new RealPoint( 3 );
+				bdvHandlePanel.getViewerPanel().getGlobalMouseCoordinates( mousePointer );
+				segmentsUnderMouse = findSegments( labelingFrames, mousePointer );
+				if ( !( segmentsUnderMouse.isEmpty() ) ) {
+					selectedIndex = 0;
+					showFirstSegmentUnderMouse( time, segmentsUnderMouse.get( selectedIndex ) );
+				}
 				JComponent component = ( JComponent ) e.getSource();
-				component.setToolTipText( "Number of conflicting segments for selected: " + conflictSet.size() );
+				component.setToolTipText( "Number of conflicting segments for selected: " + segmentsUnderMouse.size() ); //TODO doesn't work anymore
 			}
 		}
 
-		private void findConflictSets( int time ) {
-			conflictSet.removeAll( conflictSet );
-			if ( !( selectedSegmentNode == null ) ) {
-				conflictSet = model.getProblem( time ).getConflictSetFor( selectedSegmentNode );
-				setSelectedIndex( conflictSet.indexOf( selectedSegmentNode ) );
+		private List< LabelingSegment > findSegments( ImgLabeling< LabelData, IntType > labelingFrames, RealPoint mousePointer ) {
+			List< LabelingSegment > segmentsUnderMouse = new ArrayList<>();
+			final RealRandomAccess< LabelingType< LabelData > > a =
+									Views.interpolate(
+											Views.extendValue(
+													labelingFrames,
+													labelingFrames.firstElement().createVariable() ),
+									new NearestNeighborInterpolatorFactory<>() )
+							.realRandomAccess();
+
+			a.setPosition( new int[] { ( int ) mousePointer.getFloatPosition( 0 ), ( int ) mousePointer.getFloatPosition( 1 ) } );
+			//Only finds conflicts at mouse position
+			for ( LabelData labelData : a.get() ) {
+				segmentsUnderMouse.add( labelData.getSegment() );
 			}
+			return segmentsUnderMouse;
 		}
 
 		@Override
@@ -237,14 +214,14 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 		@Override
 		public void keyPressed( KeyEvent e ) {
 			if ( e.getKeyCode() == KeyEvent.VK_UP ) {
-				if ( conflictSet.size() > 1 ) {
-					if ( selectedIndex == conflictSet.size() - 1 ) {
+				if ( segmentsUnderMouse.size() > 1 ) {
+					if ( selectedIndex == segmentsUnderMouse.size() - 1 ) {
 						setSelectedIndex( 0 );
 					} else {
 						setSelectedIndex( selectedIndex + 1 );
 					}
 					displayInEditMode(
-							conflictSet.get( selectedIndex ).getSegment(),
+							segmentsUnderMouse.get( selectedIndex ),
 							bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
 				}
 
@@ -294,4 +271,6 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 	public List< BdvOverlay > bdvGetOverlays() {
 		return this.overlays;
 	}
+
+
 }
