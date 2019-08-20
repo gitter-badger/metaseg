@@ -215,6 +215,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
 		MetaSegLog.segmenterLog.info( "Done!" );
 		model.getParentModel().getSolutionModel().populateBdv();
+		model.getParentModel().getMainPanel().getTabLevEdit().populateBdv();
 	}
 
 	private void actionFetchForManualClassify() {

@@ -175,4 +175,5 @@ public class MetaSegModel implements AutoCloseable {
 	public boolean is2D() {
 		return is2D;
 	}
+
 }

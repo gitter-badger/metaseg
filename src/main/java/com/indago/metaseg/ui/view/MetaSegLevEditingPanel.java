@@ -4,28 +4,24 @@ import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
+import org.scijava.ui.behaviour.ClickBehaviour;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.scijava.ui.behaviour.util.Behaviours;
+
 import com.indago.data.segmentation.LabelData;
 import com.indago.data.segmentation.LabelingSegment;
-import com.indago.fg.Assignment;
-import com.indago.io.DataMover;
-import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
 import com.indago.metaseg.ui.util.SolutionVisualizer;
-import com.indago.pg.IndicatorNode;
-import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.bdv.BdvWithOverlaysOwner;
 
 import bdv.util.Bdv;
@@ -35,16 +31,17 @@ import bdv.util.BdvSource;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccess;
+import net.imglib2.converter.Converters;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
-import net.imglib2.roi.IterableRegion;
-import net.imglib2.roi.Regions;
 import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.roi.labeling.LabelingType;
+import net.imglib2.type.BooleanType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.view.IntervalView;
+import net.imglib2.util.ConstantUtils;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
 import net.miginfocom.swing.MigLayout;
 
@@ -61,13 +58,116 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 	private List< BdvSource > bdvSources = new ArrayList<>();
 	private List< BdvSource > bdvOverlaySources = new ArrayList<>();
 	private List< BdvOverlay > overlays = new ArrayList<>();
+	private MouseMotionListener mml;
+	protected ImgLabeling< LabelData, IntType > labelingFrames;
+	protected RealPoint mousePointer;
+	private ArrayList< LabelingSegment > segmentsUnderMouse;
+	private int selectedIndex;
+	private ValuePair< LabelingSegment, Integer > highlightedSegment;
+	private final LinkedRandomAccessible< IntType > highlightedSegmentRai =
+			new LinkedRandomAccessible<>( ConstantUtils.constantRandomAccessible( new IntType(), 2 ) ); //TODO Change 2 to match 2D/3D image
 
 	public MetaSegLevEditingPanel( MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );
 		this.model = solutionModel;
 		buildGui();
-		bdvHandlePanel.getViewerPanel().getDisplay().addHandler( new MouseOver() );
+		populateBdv();
+		this.mml = new MouseMotionListener() {
+
+			@Override
+			public void mouseDragged( MouseEvent e ) {
+			}
+
+			@Override
+			public void mouseMoved( MouseEvent e ) {
+				mousePointer = new RealPoint( 3 );
+				bdvHandlePanel.getViewerPanel().getGlobalMouseCoordinates( mousePointer );
+				final int x = ( int ) mousePointer.getFloatPosition( 0 );
+				final int y = ( int ) mousePointer.getFloatPosition( 1 );
+				final int z = ( int ) mousePointer.getFloatPosition( 2 );
+				if ( !model.getPgSolutions().isEmpty() && !( model.getPgSolutions() == null ) ) {
+					int time = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
+					labelingFrames =
+							model.getModel().getCostTrainerModel().getLabelings().getLabelingPlusForFrame( time ).getLabeling();
+					findSegments( x, y, z, time );
+					if ( !( segmentsUnderMouse.isEmpty() ) ) {
+						highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( 0 ), time );
+						showHighlightedSegment();
+						setSelectedIndex( 0 );
+					}
+
+				}
+
+			}
+
+		};
+		bdvHandlePanel.getBdvHandle().getViewerPanel().getDisplay().addMouseMotionListener( this.mml );
+		final Behaviours behaviours = new Behaviours( new InputTriggerConfig(), new String[] { "metaseg" } );
+		behaviours.install( bdvHandlePanel.getBdvHandle().getTriggerbindings(), "my-new-behaviours" );
+		behaviours.behaviour(
+				new ClickBehaviour() {
+
+					@Override
+					public void click( int x, int y ) {
+						browseSegments( x, y, bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
+
+					}
+				},
+				"browse segments",
+				"P" );
 	}
+
+	protected void browseSegments( int x, int y, int time ) {
+		if ( !( segmentsUnderMouse == null ) && !( segmentsUnderMouse.isEmpty() ) ) {
+			if ( segmentsUnderMouse.size() > 1 ) {
+				int idx = getSelectedIndex();
+				if ( idx == segmentsUnderMouse.size() - 1 ) {
+					setSelectedIndex( 0 );
+					highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( selectedIndex ), time );
+					showHighlightedSegment();
+				} else {
+					setSelectedIndex( idx + 1 );
+					highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( selectedIndex ), time );
+					showHighlightedSegment();
+				}
+			}
+		}
+
+	}
+
+
+	protected void setSelectedIndex( int i ) {
+		selectedIndex = i;
+	}
+
+	public int getSelectedIndex() {
+		return selectedIndex;
+	}
+
+	protected void showHighlightedSegment() {
+		RandomAccessibleInterval< ? extends BooleanType< ? > > region = highlightedSegment.getA().getRegion();
+		RandomAccessibleInterval< IntType > ret = Converters.convert( region, ( in, out ) -> out.set( in.get() ? 1 : 0 ), new IntType() );
+		highlightedSegmentRai.setSource( ret );
+		bdvHandlePanel.getViewerPanel().setTimepoint( highlightedSegment.getB() );
+		bdvHandlePanel.getViewerPanel().requestRepaint();
+	}
+
+	protected ArrayList< LabelingSegment > findSegments( final int x, final int y, int z, int time ) {
+		segmentsUnderMouse = new ArrayList<>();
+		final RealRandomAccess< LabelingType< LabelData > > a = Views
+				.interpolate(
+						Views.extendValue( labelingFrames, labelingFrames.firstElement().createVariable() ),
+						new NearestNeighborInterpolatorFactory<>() )
+				.realRandomAccess();
+
+		a.setPosition( new int[] { x, y } );
+		for ( LabelData labelData : a.get() ) {
+			segmentsUnderMouse.add( labelData.getSegment() );
+		}
+		return segmentsUnderMouse;
+
+	}
+
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
@@ -113,132 +213,21 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 		}
 	}
 
-	private void populateBdv() {
+	public void populateBdv() {
 		bdvRemoveAll();
-		bdvRemoveAllOverlays();
-		overlays.clear();
 		bdvAdd( model.getRawData(), "RAW" );
 		final int bdvTime = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
 		if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
-			final RandomAccessibleInterval< IntType > imgSolution = SolutionVisualizer.drawSolutionSegmentImages( this.model );
+			RandomAccessibleInterval< IntType > imgSolution = SolutionVisualizer.drawSolutionSegmentImages( this.model );
 			bdvAdd( imgSolution, "solution", 0, 2, new ARGBType( 0x00FF00 ), true );
 		}
-//		bdvAdd( new MetaSegSolutionOverlay( this.model ), "overlay" );
-	}
-
-	private class MouseOver implements MouseListener, KeyListener {
-
-		private RealPoint mousePointer;
-		private ArrayList< SegmentNode > chosenSegsInSolution;
-		private int selectedIndex;
-		private List< LabelingSegment > segmentsUnderMouse;
-
-		private void showFirstSegmentUnderMouse( int time, LabelingSegment labelingSegment ) {
-			displayInEditMode( labelingSegment, time );
-		}
-
-		private void displayInEditMode( LabelingSegment labelingSegment, int time ) {
-			populateBdv();
-			final RandomAccessibleInterval< IntType > ret =
-					DataMover.createEmptyArrayImgLike( model.getRawData(), new IntType() );
-			final IntervalView< IntType > imgSolution = Views.hyperSlice( ret, model.getModel().getTimeDimensionIndex(), time );
-			final IterableRegion< ? > region = labelingSegment.getRegion();
-			final int c = 1;
-			try {
-				Regions.sample( region, imgSolution ).forEach( pixel -> pixel.set( c ) );
-			} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
-				MetaSegLog.log.error( aiaob );
-			}
-			bdvAdd( ret, "lev. edit", 0, 2, new ARGBType( 0x00BFFF ), true );
-			bdvHandlePanel.getViewerPanel().setTimepoint( time );
-		}
-
-		@Override
-		public void mouseClicked( MouseEvent e ) {
-			if ( !model.getPgSolutions().isEmpty() && !( model.getPgSolutions() == null ) ) {
-				int time = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
-				chosenSegsInSolution = new ArrayList<>();
-				Assignment< IndicatorNode > solution = model.getPgSolution( time );
-				for ( final SegmentNode segVar : model.getProblems().get( time ).getSegments() ) {
-					if ( solution.getAssignment( segVar ) == 1 ) {
-						chosenSegsInSolution.add( segVar );
-					}
-				}
-				ImgLabeling< LabelData, IntType > labelingFrames =
-						model.getModel().getCostTrainerModel().getLabelings().getLabelingPlusForFrame( time ).getLabeling();
-				mousePointer = new RealPoint( 3 );
-				bdvHandlePanel.getViewerPanel().getGlobalMouseCoordinates( mousePointer );
-				segmentsUnderMouse = findSegments( labelingFrames, mousePointer );
-				if ( !( segmentsUnderMouse.isEmpty() ) ) {
-					selectedIndex = 0;
-					showFirstSegmentUnderMouse( time, segmentsUnderMouse.get( selectedIndex ) );
-				}
-				JComponent component = ( JComponent ) e.getSource();
-				component.setToolTipText( "Number of conflicting segments for selected: " + segmentsUnderMouse.size() ); //TODO doesn't work anymore
-			}
-		}
-
-		private List< LabelingSegment > findSegments( ImgLabeling< LabelData, IntType > labelingFrames, RealPoint mousePointer ) {
-			List< LabelingSegment > segmentsUnderMouse = new ArrayList<>();
-			final RealRandomAccess< LabelingType< LabelData > > a =
-									Views.interpolate(
-											Views.extendValue(
-													labelingFrames,
-													labelingFrames.firstElement().createVariable() ),
-									new NearestNeighborInterpolatorFactory<>() )
-							.realRandomAccess();
-
-			a.setPosition( new int[] { ( int ) mousePointer.getFloatPosition( 0 ), ( int ) mousePointer.getFloatPosition( 1 ) } );
-			//Only finds conflicts at mouse position
-			for ( LabelData labelData : a.get() ) {
-				segmentsUnderMouse.add( labelData.getSegment() );
-			}
-			return segmentsUnderMouse;
-		}
-
-		@Override
-		public void mousePressed( MouseEvent e ) {}
-
-		@Override
-		public void mouseReleased( MouseEvent e ) {}
-
-		@Override
-		public void mouseEntered( MouseEvent e ) {}
-
-		@Override
-		public void mouseExited( MouseEvent e ) {}
-
-		@Override
-		public void keyTyped( KeyEvent e ) {}
-
-		@Override
-		public void keyPressed( KeyEvent e ) {
-			if ( e.getKeyCode() == KeyEvent.VK_UP ) {
-				if ( segmentsUnderMouse.size() > 1 ) {
-					if ( selectedIndex == segmentsUnderMouse.size() - 1 ) {
-						setSelectedIndex( 0 );
-					} else {
-						setSelectedIndex( selectedIndex + 1 );
-					}
-					displayInEditMode(
-							segmentsUnderMouse.get( selectedIndex ),
-							bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
-				}
-
-			}
-		}
-
-		private void setSelectedIndex( int i ) {
-			selectedIndex = i;
-		}
-
-
-		@Override
-		public void keyReleased( KeyEvent e ) {
-			// TODO Auto-generated method stub
-
-		}
-
+		bdvAdd(
+				Views.interval( Views.addDimension( highlightedSegmentRai ), model.getRawData() ),
+				"lev. edit",
+				0,
+				2,
+				new ARGBType( 0x00BFFF ),
+				true );
 	}
 
 	@Override
@@ -258,7 +247,6 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 
 	@Override
 	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -271,6 +259,4 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 	public List< BdvOverlay > bdvGetOverlays() {
 		return this.overlays;
 	}
-
-
 }

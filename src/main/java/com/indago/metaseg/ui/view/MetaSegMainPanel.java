@@ -50,7 +50,7 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 	private JPanel tabSegmentation;
 	private JPanel tabTraining;
 	private JPanel tabSolution;
-	private JPanel tabLevEditing;
+	private MetaSegLevEditingPanel tabLevEditing;
 
 	private BdvHandlePanel bdvData;
 
@@ -230,7 +230,7 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		return tabTraining;
 	}
 
-	public JPanel getTabLevEdit() {
+	public MetaSegLevEditingPanel getTabLevEdit() {
 		return tabLevEditing;
 	}
 }
