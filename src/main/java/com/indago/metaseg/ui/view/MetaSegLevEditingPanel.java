@@ -11,6 +11,7 @@ import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
@@ -92,6 +93,9 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 					findSegments( x, y, z, time );
 					if ( !( segmentsUnderMouse.isEmpty() ) ) {
 						highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( 0 ), time );
+						JComponent component = ( JComponent ) e.getSource();
+						LabelingSegment ls = highlightedSegment.getA();
+						component.setToolTipText( "Cost of segment: " + model.getModel().getCostTrainerModel().getCost( ls ) );
 						showHighlightedSegment();
 						setSelectedIndex( 0 );
 					}
