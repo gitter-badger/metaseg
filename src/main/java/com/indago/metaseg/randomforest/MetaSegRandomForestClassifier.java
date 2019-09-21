@@ -93,7 +93,7 @@ public class MetaSegRandomForestClassifier {
 	public void initializeTrainingData( List< LabelingSegment > goodHypotheses, List< LabelingSegment > badHypotheses ) {
 		trainingData = newTable();
 		double relative_weight_bad = ( double ) goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
-//		int relative_weight_bad = 1;
+//		double relative_weight_bad = 1;
 
 		for ( int i = 0; i < goodHypotheses.size(); i++ ) {
 			DenseInstance ins = extractFeaturesFromHypotheses( goodHypotheses.get( i ), 1, 1 );
@@ -103,7 +103,6 @@ public class MetaSegRandomForestClassifier {
 			DenseInstance ins = extractFeaturesFromHypotheses( badHypotheses.get( i ), relative_weight_bad, 0 );
 			trainingData.add( ins );
 		}
-
 	}
 
 	public void buildRandomForest() {
@@ -123,8 +122,13 @@ public class MetaSegRandomForestClassifier {
 			DenseInstance ins = extractFeaturesFromHypotheses( segment, 1, 0 );
 			ins.setDataset( testData );
 			try {
-				double prob = forest.distributionForInstance( ins )[ 1 ];
-				costs.put( segment, -prob );
+				double prob = forest.distributionForInstance( ins )[ 1 ]; // probability of class 1 ("good" class)
+				if ( prob < 0.5 ) {
+					costs.put( segment, prob );
+				} else {
+					costs.put( segment, -prob );
+				}
+
 			} catch ( Exception e ) {
 				e.printStackTrace();
 			}

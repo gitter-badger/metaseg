@@ -32,10 +32,12 @@ import com.indago.metaseg.data.LabelingFrames;
 import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
 import com.indago.metaseg.ui.util.Utils;
 import com.indago.ui.bdv.BdvOwner;
+import com.indago.util.ImglibUtil;
 
 import bdv.util.BdvHandlePanel;
 import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
+import net.imagej.ImgPlus;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
@@ -46,6 +48,7 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
@@ -78,11 +81,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private boolean ongoingUndoFlag = false;
 	private Stack< Pair< ValuePair< LabelingSegment, Integer >, String > > undoHelperStack = new Stack<>();
 	private Pair< ValuePair< LabelingSegment, Integer >, String > poppedStatePair;
+	private DoubleType min;
+	private DoubleType max;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
 		costs = new HashMap<>();
+		ImgPlus< DoubleType > img = parentModel.getRawData();
+		min = img.randomAccess().get().copy();
+		max = min.copy();
+		ImglibUtil.computeMinMax( Views.iterable( img ), min, max );
+
 	}
 
 	public MetaSegModel getParentModel() {
@@ -195,7 +205,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			public void actionPerformed( ActionEvent e ) {
 
 				modifyStatesIfUndo();
-				ValuePair vp = new ValuePair<>( labelingSegment, bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
+				ValuePair< LabelingSegment, Integer > vp =
+						new ValuePair<>( labelingSegment, bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
 				goodHypotheses.add( vp );
 				undoStack.push( new ValuePair<>( vp, "good" ) );
 				modifyPredictionSet();
@@ -215,7 +226,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			@Override
 			public void actionPerformed( ActionEvent e ) {
 				modifyStatesIfUndo();
-				ValuePair vp = new ValuePair<>( labelingSegment, bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
+				ValuePair< LabelingSegment, Integer > vp =
+						new ValuePair<>( labelingSegment, bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
 				badHypotheses.add( vp );
 				undoStack.push( new ValuePair<>( vp, "bad" ) );
 				modifyPredictionSet();
@@ -285,14 +297,16 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				double uncertaintyLB;
 				double uncertaintyUB;
 				ValuePair< LabelingSegment, Integer > chosenSegWIthTime = null;
-				if ( alMode == "active learning (normal)" ) {
+				if ( alMode == "active learning (normal)" ) { //TODO fix for positive costs 
 					uncertaintyLB = -0.8d;
 					uncertaintyUB = -0.2d;
 					chosenSegWIthTime = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
 				} else if ( alMode == "active learning (class balance)" ) {
 					if ( goodHypotheses.size() >= badHypotheses.size() ) {
-						uncertaintyLB = -0.49d;
-						uncertaintyUB = -0.2d;
+//						uncertaintyLB = -0.49d;
+//						uncertaintyUB = -0.2d;
+						uncertaintyLB = 0.2d;
+						uncertaintyUB = 0.49d;
 					} else {
 						uncertaintyLB = -0.8d;
 						uncertaintyUB = -0.51d;
@@ -328,7 +342,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		int default_color = 0xFFD700;
 		int maxVal = 2;
 		bdvRemoveAll();
-		bdvAdd( parentModel.getRawData(), "RAW" );
+		bdvAdd( parentModel.getRawData(), "RAW", min.get(), max.get(), new ARGBType( 0xFFFFFF ), true );
 		final int c = 1;
 		final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
 		LabelingSegment segment = chosenSegWIthTime.getA();
@@ -444,7 +458,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		costs = rf.predict( predSetThisIter );
 		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
-			costs.put( segment.getA(), -1d );
+			costs.put( segment.getA(), -10d );
 		}
 		for ( ValuePair< LabelingSegment, Integer > segment : badHypotheses ) {
 			costs.put( segment.getA(), 100d ); //Setting positive costs (aggressive) instead of 0 to ensure bad hypotheses are never selected by optimization
@@ -458,6 +472,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		ArrayList< LabelingSegment > tempList = new ArrayList<>();
 		tempList.add( hypothesis.getA() );
 		Map< LabelingSegment, Double > localCosts = rf.predict( tempList );
+		int trainsetsize = goodHypotheses.size() + badHypotheses.size();
+		System.out.println( "Training set size:" + trainsetsize );
 		return localCosts;
 	}
 
