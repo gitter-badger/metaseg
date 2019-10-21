@@ -1,25 +1,22 @@
 package com.indago.metaseg;
 
-import java.io.File;
-import java.util.Collection;
-import java.util.List;
-
-import org.ojalgo.netio.BasicLogger;
-import org.ojalgo.optimisation.Expression;
-import org.ojalgo.optimisation.ExpressionsBasedModel;
-import org.ojalgo.optimisation.Optimisation;
-import org.ojalgo.optimisation.solver.gurobi.SolverGurobi;
-
 import com.indago.fg.Assignment;
 import com.indago.fg.Factor;
 import com.indago.fg.LinearConstraint;
 import com.indago.fg.Relation;
 import com.indago.fg.UnaryCostConstraintGraph;
 import com.indago.fg.Variable;
-
 import gnu.trove.impl.Constants;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
+import org.ojalgo.netio.BasicLogger;
+import org.ojalgo.optimisation.Expression;
+import org.ojalgo.optimisation.ExpressionsBasedModel;
+import org.ojalgo.optimisation.Optimisation;
+
+import java.io.File;
+import java.util.Collection;
+import java.util.List;
 
 public class SolveOjalgo {
 
@@ -51,7 +48,7 @@ public class SolveOjalgo {
 			model.dispose();
 		}
 		
-		ExpressionsBasedModel.addFallbackSolver( SolverGurobi.INTEGRATION );
+//		ExpressionsBasedModel.addFallbackSolver( SolverGurobi.INTEGRATION );
 //		ExpressionsBasedModel.addPreferredSolver( SolverGurobi.INTEGRATION );
 		model = new ExpressionsBasedModel();
 		BasicLogger.debug( SolveOjalgo.class.getSimpleName() );

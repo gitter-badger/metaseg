@@ -1,17 +1,12 @@
-import javax.swing.JOptionPane;
-
-import org.scijava.Context;
+import com.indago.metaseg.MetaSegApplication;
+import com.indago.plugins.seg.IndagoSegmentationPluginService;
+import net.imagej.ops.OpService;
 import org.scijava.command.Command;
-import org.scijava.command.ContextCommand;
 import org.scijava.log.Logger;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import com.indago.gurobi.GurobiInstaller;
-import com.indago.metaseg.MetaSegApplication;
-import com.indago.plugins.seg.IndagoSegmentationPluginService;
-
-import net.imagej.ops.OpService;
+import javax.swing.*;
 
 /**
  * MetaSeg Plugin for Fiji/ImageJ2
@@ -36,9 +31,9 @@ public class MetasegPlugin implements Command {
 	 */
 	@Override
 	public void run() {
-		final boolean gurobiWorks = GurobiInstaller.install();
+//		final boolean gurobiWorks = GurobiInstaller.install();
 
-		if(gurobiWorks) {
+//		if(gurobiWorks) {
 			final MetaSegApplication app = new MetaSegApplication(opService, tr2dSegmentationPluginService, log);
 			try {
 				app.run( null );
@@ -46,9 +41,9 @@ public class MetasegPlugin implements Command {
 				showGurobiErrorMessage( err );
 				app.quit( 100 );
 			}
-		}
-		else
-			log.warn( "Abort start of MetaSeg, because Gurobi is not working properly." );
+//		}
+//		else
+//			log.warn( "Abort start of MetaSeg, because Gurobi is not working properly." );
 	}
 
 	private void showGurobiErrorMessage( final NoClassDefFoundError err )

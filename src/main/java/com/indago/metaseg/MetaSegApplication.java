@@ -4,33 +4,7 @@ package com.indago.metaseg;
  */
 
 
-import java.awt.Image;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.io.File;
-import java.io.IOException;
-
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.WindowConstants;
-
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.scijava.Context;
-import org.scijava.app.StatusService;
-import org.scijava.io.IOService;
-import org.scijava.log.LogService;
-import org.scijava.log.Logger;
-import org.scijava.widget.WidgetService;
-
 import com.apple.eawt.Application;
-import com.indago.gurobi.GurobiInstaller;
 import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
 import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.view.MetaSegMainPanel;
@@ -38,7 +12,6 @@ import com.indago.plugins.seg.IndagoSegmentationPluginService;
 import com.indago.ui.util.FrameProperties;
 import com.indago.ui.util.UniversalFileChooser;
 import com.indago.util.OSValidator;
-
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -60,7 +33,27 @@ import net.imagej.ImgPlus;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.imglib2.img.VirtualStackAdapter;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.scijava.Context;
+import org.scijava.app.StatusService;
+import org.scijava.io.IOService;
+import org.scijava.log.LogService;
+import org.scijava.log.Logger;
+import org.scijava.widget.WidgetService;
 import weka.gui.ExtensionFileFilter;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Starts the tr2d app.
@@ -126,7 +119,7 @@ public class MetaSegApplication {
 		// GET THE APP SPECIFIC LOGGER
 		// ---------------------------
 
-		checkGurobiAvailability();
+//		checkGurobiAvailability();
 		parseCommandLineArgs( args );
 
 		guiFrame = new JFrame( "MetaSeg" );
@@ -367,18 +360,18 @@ public class MetaSegApplication {
 	 * Check if GRBEnv can be instantiated. For this to work Gurobi has to be
 	 * installed and a valid license has to be pulled.
 	 */
-	private void checkGurobiAvailability() {
-		final String jlp = System.getProperty( "java.library.path" );
-		if ( !GurobiInstaller.testGurobi() ) {
-			final String msgs = "Initial Gurobi test threw exception... check your Gruobi setup!\n\nJava library path: " + jlp;
-			JOptionPane.showMessageDialog(
-					guiFrame,
-					msgs,
-					"Gurobi Error?",
-					JOptionPane.ERROR_MESSAGE);
-			quit(98);
-		}
-	}
+//	private void checkGurobiAvailability() {
+//		final String jlp = System.getProperty( "java.library.path" );
+//		if ( !GurobiInstaller.testGurobi() ) {
+//			final String msgs = "Initial Gurobi test threw exception... check your Gruobi setup!\n\nJava library path: " + jlp;
+//			JOptionPane.showMessageDialog(
+//					guiFrame,
+//					msgs,
+//					"Gurobi Error?",
+//					JOptionPane.ERROR_MESSAGE);
+//			quit(98);
+//		}
+//	}
 
 	/**
 	 * Parse command line arguments and set variables accordingly.
