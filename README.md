@@ -10,3 +10,8 @@ Example segmentation workflow:
 5. Then start active learning, it will start displaying segments (click Y or N to classify as good/bad)
 6. After few iterations, click compute solution. This switches to solution tab. 
 7. Go to frame editor tab and then hover with mouse over any segment. To toggle between segments, use 'P'.
+
+For label editor, all the functionalities live in com.indago.metaseg.ui.view.MetasSegLevEditingPanel
+
+For running MetaSeg, put the followinmg in run configurations (change the path to data folder on your computer)
+-p /Users/prakash/Desktop/metasegData/c.elegans/metaseg_small

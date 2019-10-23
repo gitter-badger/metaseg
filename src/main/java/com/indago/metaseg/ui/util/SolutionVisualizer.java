@@ -32,7 +32,6 @@ public class SolutionVisualizer {
 				final Assignment< IndicatorNode > solution = msSolverModel.getPgSolution( t );
 				if ( solution != null ) {
 					final IntervalView< IntType > retSlice = Views.hyperSlice( ret, msSolverModel.getModel().getTimeDimensionIndex(), t );
-
 					final int curColorId = 1;
 					for ( final SegmentNode segVar : msSolverModel.getProblems().get( t ).getSegments() ) {
 						if ( solution.getAssignment( segVar ) == 1 ) {
