@@ -68,19 +68,19 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private final List< RandomAccessibleInterval< IntType > > imgs = new ArrayList<>();
 	private final List< BdvSource > bdvSources = new ArrayList<>();
 	private final List< BdvOverlay > overlays = new ArrayList<>();
-	private List< ValuePair< LabelingSegment, Integer > > goodHypotheses;
-	private List< ValuePair< LabelingSegment, Integer > > badHypotheses;
-	private List< ValuePair< LabelingSegment, Integer > > predictionSet;
-	private List< ValuePair< LabelingSegment, Integer > > allSegsWithTime;
+	private List< ValuePair< LabelingSegment, Integer > > goodHypotheses; // Labeling segment with time index
+	private List< ValuePair< LabelingSegment, Integer > > badHypotheses; // Labeling segment with time index
+	private List< ValuePair< LabelingSegment, Integer > > predictionSet; // Labeling segment with time index
+	private List< ValuePair< LabelingSegment, Integer > > allSegsWithTime; // Labeling segment with time index
 	private int maxHypothesisSize = 30000; // gets set to more sensible value in constructor
 	private int minHypothesisSize = 100;
 	private MetaSegRandomForestClassifier rf;
 	public String alMode;
-	private Stack< Pair< ValuePair< LabelingSegment, Integer >, String > > undoStack = new Stack<>();
+	private Stack< Pair< ValuePair< LabelingSegment, Integer >, String > > undoStack = new Stack<>(); //Stores labeling segments with time and their good/bad class for undo operation
 	private boolean continuousRetrainState;
 	private boolean ongoingUndoFlag = false;
 	private Stack< Pair< ValuePair< LabelingSegment, Integer >, String > > undoHelperStack = new Stack<>();
-	private Pair< ValuePair< LabelingSegment, Integer >, String > poppedStatePair;
+	private Pair< ValuePair< LabelingSegment, Integer >, String > poppedStatePair; // Labeling segment with time index
 	private DoubleType min;
 	private DoubleType max;
 
@@ -198,7 +198,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return this.bdvSources;
 	}
 
-	public void installBehaviour( LabelingSegment labelingSegment ) {
+	public void chooseGoodBadAndModifyTrainPredUndoSets( LabelingSegment labelingSegment ) {
 		registerKeyBinding( KeyStroke.getKeyStroke( KeyEvent.VK_Y, 0 ), "Yes", new AbstractAction() {
 
 			@Override
@@ -334,22 +334,48 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 	}
 
-	private void displaySelectedSegment( ValuePair< LabelingSegment, Integer > chosenSegWIthTime ) { //Can be removed later or modified to accommodate displaynextSegment()
-		showSeg( chosenSegWIthTime );
+	private void displaySelectedSegment( ValuePair< LabelingSegment, Integer > chosenSegWithTime ) { //Can be removed later or modified to accommodate displaynextSegment()
+		showSeg( chosenSegWithTime );
 	}
 
 	private void showSeg( ValuePair< LabelingSegment, Integer > chosenSegWIthTime ) {
-		int default_color = 0xFFD700;
 		int maxVal = 2;
 		bdvRemoveAll();
 		bdvAdd( parentModel.getRawData(), "RAW", min.get(), max.get(), new ARGBType( 0xFFFFFF ), true );
 		final int c = 1;
 		final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
 		LabelingSegment segment = chosenSegWIthTime.getA();
+		int time = chosenSegWIthTime.getB();
+		paintSegmentToDisplayDuringManualClassification( c, hypothesisImage, segment, time );
+		bdvHandlePanel.getViewerPanel().setTimepoint( time );
+		setZSlice( segment ); //only for 3d
+		int displayColor = chooseColorForDisplay();
+		bdvAdd( hypothesisImage, "Classifying", 0, maxVal, new ARGBType( displayColor ), true );
+		chooseGoodBadAndModifyTrainPredUndoSets( segment );
+	}
 
+	private int chooseColorForDisplay() {
+		int displayColor;
+		if ( ongoingUndoFlag ) {
+			if ( poppedStatePair.getB() == "bad" ) {
+				displayColor = 0xFF0000;
+			} else {
+				displayColor = 0x00FF00;
+			}
+		} else {
+			displayColor = 0xFFD700;
+		}
+		return displayColor;
+	}
+
+	private void paintSegmentToDisplayDuringManualClassification(
+			final int c,
+			final RandomAccessibleInterval< IntType > hypothesisImage,
+			LabelingSegment segment,
+			int time ) {
 		IterableRegion< ? > region = segment.getRegion();
 		IntervalView< IntType > retSlice;
-		int time = chosenSegWIthTime.getB();
+
 		if ( parentModel.getNumberOfFrames() > 1 ) {
 			retSlice =
 					Views.hyperSlice(
@@ -372,18 +398,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		} catch ( final ArrayIndexOutOfBoundsException aiaob ) {
 			MetaSegLog.log.error( aiaob );
 		}
-		bdvHandlePanel.getViewerPanel().setTimepoint( time );
-		setZSlice( segment ); //only for 3d
-		if ( ongoingUndoFlag ) {
-			maxVal = 2;
-			if ( poppedStatePair.getB() == "bad" ) {
-				default_color = 0xFF0000;
-			} else {
-				default_color = 0x00FF00;
-			}
-		}
-		bdvAdd( hypothesisImage, "Classifying", 0, maxVal, new ARGBType( default_color ), true );
-		installBehaviour( segment );
 	}
 
 	private void setZSlice( LabelingSegment segment ) {
@@ -483,7 +497,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return null;
 	}
 
-	public void getTrainingData() {
+	public void showFirstSegmentForManualClassification() {
 		JOptionPane
 				.showMessageDialog( null, "Starting manual classification step, press Y/N to classify as good/bad hypothesis when displayed..." );
 		if ( !predictionSet.isEmpty() ) {
@@ -534,4 +548,5 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 
 	}
+
 }

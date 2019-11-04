@@ -183,11 +183,13 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
 			actionFetchForManualClassify();
 		} else if ( e.getSource().equals( btnComputeSoln ) ) {
+
 			try {
 				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
+
 
 		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
 			JCheckBox state = ( JCheckBox ) e.getSource();
@@ -222,7 +224,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
 		model.setAllSegAndCorrespTime();
 		model.randomizeSegmentsAndPrepData();
-		model.getTrainingData();
+		model.showFirstSegmentForManualClassification();
 	}
 
 	private void actionFetch() {
