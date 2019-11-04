@@ -245,5 +245,4 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 	public MetaSegModel getModel() {
 		return model;
 	}
-
 }

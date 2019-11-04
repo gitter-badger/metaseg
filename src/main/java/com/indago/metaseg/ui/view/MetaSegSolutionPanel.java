@@ -7,7 +7,15 @@ import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -18,8 +26,11 @@ import javax.swing.JSplitPane;
 import org.scijava.Context;
 
 import com.indago.metaseg.MetaSegLog;
+import com.indago.metaseg.pg.MetaSegProblem;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
 import com.indago.metaseg.ui.util.SolutionExporter;
+import com.indago.pg.segments.ConflictSet;
+import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.util.UniversalFileChooser;
 
 import bdv.util.Bdv;
@@ -39,9 +50,12 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 	private JSplitPane splitPane;
 	private JButton btnContinueMetatrain;
-	private JButton btnExport;
+	private JButton btnExportSegCompatibleImages;
+	private JButton btnExportLabelFusionProblem;
 	
 	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
+
+	private JButton exportLabelFusionProblem;
 
 	public MetaSegSolutionPanel( final MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );
@@ -78,9 +92,12 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		btnContinueMetatrain.addActionListener( this );
 		panelContinueMetaTrain.add( btnContinueMetatrain, "growx, wrap" );
 
-		btnExport = new JButton( "export SEG images" );
-		btnExport.addActionListener( this );
-		panelExport.add( btnExport, "growx, wrap" );
+		btnExportSegCompatibleImages = new JButton( "export SEG images" );
+		btnExportSegCompatibleImages.addActionListener( this );
+		btnExportLabelFusionProblem = new JButton( "export label fusion problem..." );
+		btnExportLabelFusionProblem.addActionListener( this );
+		panelExport.add( btnExportSegCompatibleImages, "growx, wrap" );
+		panelExport.add( btnExportLabelFusionProblem, "growx, wrap" );
 
 		controls.add( panelContinueMetaTrain, "growx, wrap" );
 		controls.add( panelExport, "growx, wrap" );
@@ -101,10 +118,27 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-		} else if ( e.getSource().equals( btnExport ) ) {
+		} else if ( e.getSource().equals( btnExportSegCompatibleImages ) ) {
 			actionExportCurrentSolution();
+		} else if ( e.getSource().equals( btnExportLabelFusionProblem ) ) {
+			actionExportLabelFusionProblem();
 		}
 	}
+
+	private void actionExportLabelFusionProblem() {
+		MetaSegLog.segmenterLog.info( "Exporting problem graphs..." );
+		final File projectFolderBasePath = UniversalFileChooser.showLoadFolderChooser(
+				model.bdvGetHandlePanel().getViewerPanel(),
+				"",
+				"Choose folder for problem graph export..." );
+		if ( projectFolderBasePath.exists() && projectFolderBasePath.isDirectory() ) {
+			problemGraphExport( projectFolderBasePath );
+		} else {
+			JOptionPane.showMessageDialog( this, "Please choose a valid folder for this export!", "Selection Error", JOptionPane.ERROR_MESSAGE );
+		}
+		MetaSegLog.segmenterLog.info( "Done!" );
+	}
+
 
 	private void actionExportCurrentSolution() {
 		MetaSegLog.segmenterLog.info( "Exporting SEG compatible images..." );
@@ -113,15 +147,77 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 				"",
 				"Choose folder for SEG format images export..." );
 		if ( projectFolderBasePath.exists() && projectFolderBasePath.isDirectory() ) {
-			SegImagesExport( projectFolderBasePath );
+			segImagesExport( projectFolderBasePath );
 		} else {
 			JOptionPane.showMessageDialog( this, "Please choose a valid folder for this export!", "Selection Error", JOptionPane.ERROR_MESSAGE );
 		}
 		MetaSegLog.segmenterLog.info( "Done!" );
 	}
 
-	private void SegImagesExport( File projectFolderBasePath ) {
+	private void segImagesExport( File projectFolderBasePath ) {
 		SolutionExporter.exportSegData( model, projectFolderBasePath );
+
+	}
+
+	private void problemGraphExport( File projectFolderBasePath ) {
+		final File exportFile = new File( projectFolderBasePath, "metaseg_problem.pg" );
+		try {
+			final SimpleDateFormat sdfDate = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" );//dd/MM/yyyy
+			final Date now = new Date();
+			final String strNow = sdfDate.format( now );
+
+			final BufferedWriter problemWriter = new BufferedWriter( new FileWriter( exportFile ) );
+			problemWriter.write( "# MetaSeg problem export from " + strNow + "\n" );
+			List< MetaSegProblem > msp = model.getProblems();
+			problemWriter.write( "\n# === SEGMENT HYPOTHESES =================================================\n" );
+			for ( int frame = 0; frame < msp.size(); frame++ ) {
+				MetaSegProblem t = msp.get( frame );
+				problemWriter.write( String.format( "\n# t=%d\n", frame ) );
+
+				// write all segment hypotheses
+				for ( final SegmentNode segment : t.getSegments() ) {
+					writeSegmentLine( frame, segment, problemWriter );
+				}
+			}
+
+			problemWriter.write( "# === CONSTRAINTS ========================================================\n\n" );
+			for ( final MetaSegProblem t : msp ) {
+				for ( final ConflictSet cs : t.getConflictSets() ) {
+					ArrayList< Integer > idList = new ArrayList<>();
+					final Iterator< SegmentNode > it = cs.iterator();
+					while ( it.hasNext() ) {
+						final SegmentNode segnode = it.next();
+						idList.add( segnode.getSegment().getId() );
+					}
+					// CONFSET <id...>
+					problemWriter.write( "CONFSET " );
+					boolean first = true;
+					for ( final int id : idList ) {
+						if ( !first ) problemWriter.write( " + " );
+						problemWriter.write( String.format( "%4d ", id ) );
+						first = false;
+					}
+					problemWriter.write( " <= 1\n" );
+				}
+			}
+		} catch ( final IOException e ) {
+			JOptionPane
+					.showMessageDialog( this, "Cannot write in selected export folder... cancel export!", "File Error", JOptionPane.ERROR_MESSAGE );
+			e.printStackTrace();
+		}
+
+	}
+
+	private void writeSegmentLine( int frame, SegmentNode segment, BufferedWriter problemWriter ) throws IOException {
+		// H <time> <id> <cost> (<com_x_pos> <com_y_pos>)
+		problemWriter.write(
+				String.format(
+						"H %3d %4d %.16f (%.1f,%.1f)\n",
+						frame,
+						segment.getSegment().getId(),
+						segment.getCost(),
+						segment.getSegment().getCenterOfMass().getFloatPosition( 0 ),
+						segment.getSegment().getCenterOfMass().getFloatPosition( 1 ) ) );
 
 	}
 
@@ -131,4 +227,5 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		model.getModel().getCostTrainerModel().selectSegmentForDisplay();
 
 	}
+
 }
