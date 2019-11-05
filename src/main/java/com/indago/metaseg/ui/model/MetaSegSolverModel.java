@@ -72,14 +72,14 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 				MetaSegLog.solverLog.info( String.format( "...t = %d...", t ) );
 				msProblems.add(
 						new MetaSegProblem(
-								costModel.getLabelings().getSegments( t ),
+								costModel.getAlreadyExistingLabelingFrames().getSegments( t ),
 								costModel,
 								costModel.getConflictGraph( t ) ) );
 			}
 		} else {
 			msProblems.add(
 					new MetaSegProblem(
-							costModel.getLabelings().getSegments( 0 ),
+							costModel.getAlreadyExistingLabelingFrames().getSegments( 0 ),
 							costModel,
 							costModel.getConflictGraph( 0 ) ) );
 		}

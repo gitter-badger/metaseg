@@ -5,6 +5,7 @@ package com.indago.metaseg.ui.model;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,8 +28,11 @@ import com.indago.costs.CostParams;
 import com.indago.data.segmentation.ConflictGraph;
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.io.DataMover;
+import com.indago.io.ProjectFile;
+import com.indago.io.ProjectFolder;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.data.LabelingFrames;
+import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
 import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
 import com.indago.metaseg.ui.util.Utils;
 import com.indago.ui.bdv.BdvOwner;
@@ -37,10 +41,13 @@ import com.indago.util.ImglibUtil;
 import bdv.util.BdvHandlePanel;
 import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
+import ij.ImagePlus;
+import indago.ui.progress.ProgressListener;
 import net.imagej.ImgPlus;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.Regions;
@@ -84,6 +91,12 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private DoubleType min;
 	private DoubleType max;
 
+	private final String FOLDER_LABELING_FRAMES = "labeling_frames";
+	private final String FILENAME_PGRAPH = "metaeg_problem.pg";
+	private final ProjectFolder dataFolder;
+	private ProjectFolder hypothesesFolder;
+	private final List< ProgressListener > progressListeners = new ArrayList<>();
+
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
@@ -92,18 +105,29 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		min = img.randomAccess().get().copy();
 		max = min.copy();
 		ImglibUtil.computeMinMax( Views.iterable( img ), min, max );
+		final ImagePlus temp = ImageJFunctions.wrap( metaSegModel.getRawData(), "raw.tif" );
+		this.maxHypothesisSize = temp.getWidth() * temp.getHeight() - 1;
+		dataFolder = metaSegModel.getProjectFolder().getFolder( MetasegProjectFolder.LABELING_FRAMES_FOLDER );
+		dataFolder.mkdirs();
+		this.labelingFrames =
+				new LabelingFrames( metaSegModel.getSegmentationModel(), this.getMinPixelComponentSize(), this.getMaxPixelComponentSize() ); //TODO Need to fix it 
+		loadStoredLabelingFrames(); //TODO needs implementation for loading problem graph
 
 	}
+
 
 	public MetaSegModel getParentModel() {
 		return parentModel;
 	}
 
-	public LabelingFrames getLabelings() {
+	public LabelingFrames getLabelingsAfterCreationFromScratch() {
 		if ( this.labelingFrames == null ) {
 			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE ); //TODO check if fetching is correct
 			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
 			labelingFrames.setMinSegmentSize( minHypothesisSize );
+			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
+			labelingFrames.processFrames();
+		} else {
 			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
 			labelingFrames.processFrames();
 		}
@@ -111,18 +135,40 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return labelingFrames;
 	}
 
+	public LabelingFrames getAlreadyExistingLabelingFrames() {
+		return labelingFrames;
+	}
+
+	/**
+	 * @param maxPixelComponentSize
+	 *            the maximum size (in pixels) a component can be in order
+	 *            to count as a valid segmentation hypothesis.
+	 */
 	public void setMaxPixelComponentSize( int maxValue ) {
-		maxHypothesisSize = maxValue;
+		this.maxHypothesisSize = maxValue;
 	}
 
+	/**
+	 * @param minPixelComponentSize
+	 *            the minimum size (in pixels) a component needs to be in order
+	 *            to count as a valid segmentation hypothesis.
+	 */
 	public void setMinPixelComponentSize( int minValue ) {
-		minHypothesisSize = minValue;
+		this.minHypothesisSize = minValue;
 	}
 
+	/**
+	 * @return the maximum size (in pixels) a component can be in order
+	 *         to count as a valid segmentation hypothesis.
+	 */
 	public int getMaxPixelComponentSize() {
 		return maxHypothesisSize;
 	}
 
+	/**
+	 * @return the minimum size (in pixels) a component needs to be in order
+	 *         to count as a valid segmentation hypothesis.
+	 */
 	public int getMinPixelComponentSize() {
 		return minHypothesisSize;
 	}
@@ -547,6 +593,50 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			ongoingUndoFlag = false;
 		}
 
+	}
+
+	private void loadStoredLabelingFrames() {
+		// Loading hypotheses labeling frames if exist in project folder
+		try {
+			hypothesesFolder = dataFolder.addFolder( FOLDER_LABELING_FRAMES );
+			hypothesesFolder.loadFiles();
+			labelingFrames.loadFromProjectFolder( hypothesesFolder );
+
+		} catch ( final IOException ioe ) {
+			ioe.printStackTrace();
+		}
+
+		// Loading stored PGraph and solution if exist in project folder
+		final ProjectFile pgFile = parentModel.getProjectFolder().getFile( FILENAME_PGRAPH ); //TODO Need to implement loading of problem graphs if exists already in project folder
+//		if ( pgFile.exists() ) {
+//			this.tr2dTraProblem =
+//					new Tr2dTrackingProblem( this, tr2dModel.getFlowModel(), appearanceCosts, moveCosts, divisionCosts, disappearanceCosts );
+//			boolean success;
+//			try {
+//				success = tr2dTraProblem.getSerializer().loadPGraph( tr2dTraProblem, pgFile.getFile() );
+//			} catch ( final IOException e1 ) {
+//				success = false;
+//				e1.printStackTrace();
+//			}
+//
+//		}
+
+	}
+
+	public void purgeSegmentationData() {
+		dataFolder.getFile( FILENAME_PGRAPH ).getFile().delete();
+		try {
+			dataFolder.getFolder( FOLDER_LABELING_FRAMES ).deleteContent();
+		} catch ( final IOException e ) {
+			if ( dataFolder.getFolder( FOLDER_LABELING_FRAMES ).exists() ) {
+				MetaSegLog.log.error( "Labeling frames exist but cannot be deleted." );
+			}
+		}
+
+	}
+
+	public void saveLabelingFrames() {
+		labelingFrames.saveTo( hypothesesFolder, progressListeners );
 	}
 
 }

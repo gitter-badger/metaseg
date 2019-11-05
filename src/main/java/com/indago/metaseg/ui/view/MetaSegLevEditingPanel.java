@@ -89,7 +89,7 @@ public class MetaSegLevEditingPanel extends JPanel implements ActionListener, Bd
 				if ( !model.getPgSolutions().isEmpty() && !( model.getPgSolutions() == null ) ) {
 					int time = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
 					labelingFrames =
-							model.getModel().getCostTrainerModel().getLabelings().getLabelingPlusForFrame( time ).getLabeling();
+							model.getModel().getCostTrainerModel().getAlreadyExistingLabelingFrames().getLabelingPlusForFrame( time ).getLabeling();
 					findSegments( x, y, z, time );
 					if ( !( segmentsUnderMouse.isEmpty() ) ) {
 						highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( 0 ), time );
