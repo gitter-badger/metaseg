@@ -47,15 +47,11 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private static final long serialVersionUID = -2148493794258482336L;
 
 	private final MetaSegSolverModel model;
-
-	private JSplitPane splitPane;
 	private JButton btnContinueMetatrain;
 	private JButton btnExportSegCompatibleImages;
 	private JButton btnExportLabelFusionProblem;
 	
 	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
-
-	private JButton exportLabelFusionProblem;
 
 	public MetaSegSolutionPanel( final MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );

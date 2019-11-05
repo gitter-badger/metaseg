@@ -9,6 +9,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -20,11 +23,16 @@ import javax.swing.JRadioButton;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
+import com.indago.io.ProjectFile;
+import com.indago.io.ProjectFolder;
 import com.indago.metaseg.MetaSegLog;
+import com.indago.metaseg.data.LabelingFrames;
+import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
 import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
+import indago.ui.progress.ProgressListener;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -45,11 +53,21 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JCheckBox boxContinuousRetrain;
 	private JTextField txtMaxPixelComponentSize;
 	private JTextField txtMinPixelComponentSize;
+	private final String FOLDER_LABELING_FRAMES = "labeling_frames";
+	private final String FILENAME_PGRAPH = "metaeg_problem.pg";
+
+	private final ProjectFolder dataFolder;
+	private LabelingFrames labelingFrames;
+	private final List< ProgressListener > progressListeners = new ArrayList<>();
+	private ProjectFolder hypothesesFolder;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
 		this.model = costTrainerModel;
+		dataFolder = model.getParentModel().getProjectFolder().getFolder( MetasegProjectFolder.LABELING_FRAMES_FOLDER );
+		dataFolder.mkdirs();
 		buildGui();
+		loadStoredLabelingFrames(); //TODO needs implementation for loading problem graph
 	}
 
 	private void buildGui() {
@@ -228,14 +246,24 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	}
 
 	private void actionFetch() {
-
-//		parseAndSetParametersInModel();
-		model.getLabelings();
-		model.getConflictGraphs();
-		model.getConflictCliques();
+		for ( final ProgressListener progressListener : progressListeners ) {
+			progressListener.resetProgress( "Purging currently fetched segment hypotheses... (1/3)", 3 );
+		}
+		for ( final ProgressListener progressListener : progressListeners ) {
+			progressListener.hasProgressed( "Purging currently fetched segment hypotheses... (2/3)" );
+		}
+		// purge segmentation data
+		dataFolder.getFile( FILENAME_PGRAPH ).getFile().delete();
+		try {
+			dataFolder.getFolder( FOLDER_LABELING_FRAMES ).deleteContent();
+		} catch ( final IOException e ) {
+			if ( dataFolder.getFolder( FOLDER_LABELING_FRAMES ).exists() ) {
+				MetaSegLog.log.error( "Labeling frames exist but cannot be deleted." );
+			}
+		}
+		processSegmentationInputs();
 		MetaSegLog.log.info( "Segmentation results fetched!" );
 	}
-
 
 	@Override
 	public void focusGained( FocusEvent e ) {}
@@ -269,6 +297,40 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			txtMinPixelComponentSize.setText( "" + model.getMinPixelComponentSize() );
 		}
 
+	}
+
+	private void loadStoredLabelingFrames() {
+		// Loading hypotheses labeling frames if exist in project folder
+		try {
+			hypothesesFolder = dataFolder.addFolder( FOLDER_LABELING_FRAMES );
+			hypothesesFolder.loadFiles();
+//			labelingFrames.loadFromProjectFolder( hypothesesFolder );
+		} catch ( final IOException ioe ) {
+			ioe.printStackTrace();
+		}
+
+		// Loading stored PGraph and solution if exist in project folder
+		final ProjectFile pgFile = model.getParentModel().getProjectFolder().getFile( FILENAME_PGRAPH ); //TODO Need to implement loading of problem graphs if exists already in project folder
+//		if ( pgFile.exists() ) {
+//			this.tr2dTraProblem =
+//					new Tr2dTrackingProblem( this, tr2dModel.getFlowModel(), appearanceCosts, moveCosts, divisionCosts, disappearanceCosts );
+//			boolean success;
+//			try {
+//				success = tr2dTraProblem.getSerializer().loadPGraph( tr2dTraProblem, pgFile.getFile() );
+//			} catch ( final IOException e1 ) {
+//				success = false;
+//				e1.printStackTrace();
+//			}
+//
+//		}
+	}
+
+	private void processSegmentationInputs() {
+//		parseAndSetParametersInModel();
+		labelingFrames = model.getLabelings();
+		model.getConflictGraphs();
+		model.getConflictCliques();
+		labelingFrames.saveTo( hypothesesFolder, progressListeners );
 	}
 
 }

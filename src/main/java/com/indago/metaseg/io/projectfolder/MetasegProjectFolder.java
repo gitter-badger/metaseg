@@ -17,6 +17,7 @@ public class MetasegProjectFolder extends ProjectFolder {
 
 	// FOLDERS
 	public static String SEGMENTATION_FOLDER = "SEGMENTATION_FOLDER";
+	public static String LABELING_FRAMES_FOLDER = "LABELING_FRAMES";
 
 	// FILES
 	public static String FRAME_PROPERTIES = "FRAME_PROPERTIES";
@@ -35,6 +36,7 @@ public class MetasegProjectFolder extends ProjectFolder {
 		}
 		try {
 			addFolder( SEGMENTATION_FOLDER, "segmentation" );
+			addFolder( LABELING_FRAMES_FOLDER, "labeling_frames" );
 		} catch ( final IOException ioe ) {
 			ioe.printStackTrace();
 		}
