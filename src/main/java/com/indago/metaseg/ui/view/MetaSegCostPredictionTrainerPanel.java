@@ -17,6 +17,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSplitPane;
@@ -49,8 +50,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JTextField txtMaxPixelComponentSize;
 	private JTextField txtMinPixelComponentSize;
 	private final List< ProgressListener > progressListeners = new ArrayList<>();
-
-	private boolean savedLabelingFramesAndCostsLoaded;
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -217,7 +216,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		MetaSegLog.log.info( "Starting MetaSeg optimization..." );
 		model.bdvRemoveAll();
 		model.bdvAdd( model.getParentModel().getRawData(), "RAW" );
-		if ( model.isSavedLabelingFramesAndCostsLoaded() == false ) {
+		if ( model.isSavedCostsLoaded() == false ) {
 			model.startTrainingPhase();
 			model.computeAllCosts();
 		}
@@ -231,6 +230,22 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void actionFetchForManualClassify() {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
+		if ( model.isCostsExists() ) {
+			int rewriteCosts = JOptionPane.showConfirmDialog(
+					null,
+					"costs already exist, continue purging it and recreate based on new training?",
+					"Rewrite costs",
+					JOptionPane.YES_NO_OPTION );
+			if ( rewriteCosts == JOptionPane.YES_OPTION ) {
+				model.clearAllCosts();
+				model.setSavedCostsLoaded( false );
+			} else {
+				model.setSavedCostsLoaded( true );
+				return;
+			}
+		} else {
+
+		}
 		model.setAllSegAndCorrespTime();
 		model.randomizeSegmentsAndPrepData();
 		model.showFirstSegmentForManualClassification();
@@ -289,7 +304,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getConflictGraphs();
 		model.getConflictCliques();
 		model.saveLabelingFrames();
-		savedLabelingFramesAndCostsLoaded = false;
+		model.setSavedCostsLoaded( false );
 	}
 
 }

@@ -512,7 +512,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		rf.train();
 	}
 
-	public Map< LabelingSegment, Double > computeAllCosts() { //Maybe needs to go away
+	public Map< LabelingSegment, Double > computeAllCosts() {
 		ArrayList< LabelingSegment > predSetThisIter = new ArrayList<>();
 		for ( ValuePair< LabelingSegment, Integer > valuePair : predictionSet ) {
 			predSetThisIter.add( valuePair.getA() );
@@ -640,9 +640,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				MetaSegLog.log.error( "Labeling frames exist but cannot be deleted." );
 			}
 		}
-//		if ( !( costs == null ) ) {
-//			costs.clear();
-//		}
+		if ( !costs.isEmpty() ) {
+			clearAllCosts();
+		}
 
 	}
 
@@ -650,8 +650,24 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		labelingFrames.saveTo( hypothesesFolder, progressListeners );
 	}
 
-	public boolean isSavedLabelingFramesAndCostsLoaded() {
+	public boolean isSavedCostsLoaded() {
 		return savedCostsLoaded;
+	}
+
+	public void setSavedCostsLoaded( boolean b ) {
+		savedCostsLoaded = b;
+	}
+
+	public boolean isCostsExists() {
+		if ( costs.isEmpty() ) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	public void clearAllCosts() {
+		costs.clear();
 	}
 
 }
