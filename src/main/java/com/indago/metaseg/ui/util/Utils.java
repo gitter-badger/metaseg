@@ -1,7 +1,12 @@
 package com.indago.metaseg.ui.util;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +15,8 @@ import java.util.Random;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
+
+import com.indago.io.ProjectFile;
 
 public class Utils {
 
@@ -48,6 +55,28 @@ public class Utils {
 			}
 		}
 		return result;
+	}
+
+	public static Map< Integer, Double > readProblemGraphFileAndCreateCostIdMap( ProjectFile pgFile ) {
+		Map< Integer, Double > mapId2Costs = new HashMap< Integer, Double >();
+		try (BufferedReader br = new BufferedReader( new FileReader( pgFile.getFile() ) )) {
+			String line;
+			while ( ( line = br.readLine() ) != null ) {
+				if ( line.startsWith( "H" ) ) {
+					String[] columns = line.split( "\\s+" );
+					int id = Integer.parseInt( columns[ 2 ] );
+					double costOfId = Double.parseDouble( columns[ 3 ] );
+					mapId2Costs.put( id, costOfId );
+				}
+			}
+		} catch ( FileNotFoundException e ) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch ( IOException e ) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return mapId2Costs;
 	}
 
 }

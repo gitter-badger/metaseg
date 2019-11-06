@@ -88,9 +88,9 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		btnContinueMetatrain.addActionListener( this );
 		panelContinueMetaTrain.add( btnContinueMetatrain, "growx, wrap" );
 
-		btnExportSegCompatibleImages = new JButton( "export SEG images" );
+		btnExportSegCompatibleImages = new JButton( "SEG images" );
 		btnExportSegCompatibleImages.addActionListener( this );
-		btnExportLabelFusionProblem = new JButton( "export label fusion problem..." );
+		btnExportLabelFusionProblem = new JButton( "Problem graph" );
 		btnExportLabelFusionProblem.addActionListener( this );
 		panelExport.add( btnExportSegCompatibleImages, "growx, wrap" );
 		panelExport.add( btnExportLabelFusionProblem, "growx, wrap" );

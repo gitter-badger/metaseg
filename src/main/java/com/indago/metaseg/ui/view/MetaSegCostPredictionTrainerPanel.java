@@ -50,6 +50,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JTextField txtMinPixelComponentSize;
 	private final List< ProgressListener > progressListeners = new ArrayList<>();
 
+	private boolean savedLabelingFramesAndCostsLoaded;
+
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
 		this.model = costTrainerModel;
@@ -215,13 +217,16 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		MetaSegLog.log.info( "Starting MetaSeg optimization..." );
 		model.bdvRemoveAll();
 		model.bdvAdd( model.getParentModel().getRawData(), "RAW" );
-		model.startTrainingPhase();
-		model.computeAllCosts();
+		if ( model.isSavedLabelingFramesAndCostsLoaded() == false ) {
+			model.startTrainingPhase();
+			model.computeAllCosts();
+		}
 		model.getParentModel().getSolutionModel().run();
 		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
 		MetaSegLog.segmenterLog.info( "Done!" );
 		model.getParentModel().getSolutionModel().populateBdv();
 		model.getParentModel().getMainPanel().getTabLevEdit().populateBdv();
+
 	}
 
 	private void actionFetchForManualClassify() {
@@ -284,6 +289,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getConflictGraphs();
 		model.getConflictCliques();
 		model.saveLabelingFrames();
+		savedLabelingFramesAndCostsLoaded = false;
 	}
 
 }

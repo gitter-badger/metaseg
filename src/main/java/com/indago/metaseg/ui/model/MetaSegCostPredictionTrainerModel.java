@@ -92,10 +92,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private DoubleType max;
 
 	private final String FOLDER_LABELING_FRAMES = "labeling_frames";
-	private final String FILENAME_PGRAPH = "metaeg_problem.pg";
+	private final String FILENAME_PGRAPH = "metaseg_problem.pg";
 	private final ProjectFolder dataFolder;
 	private ProjectFolder hypothesesFolder;
 	private final List< ProgressListener > progressListeners = new ArrayList<>();
+	private boolean savedCostsLoaded;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -110,8 +111,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		dataFolder = metaSegModel.getProjectFolder().getFolder( MetasegProjectFolder.LABELING_FRAMES_FOLDER );
 		dataFolder.mkdirs();
 		this.labelingFrames =
-				new LabelingFrames( metaSegModel.getSegmentationModel(), this.getMinPixelComponentSize(), this.getMaxPixelComponentSize() ); //TODO Need to fix it 
-		loadStoredLabelingFrames(); //TODO needs implementation for loading problem graph
+				new LabelingFrames( metaSegModel.getSegmentationModel(), this.getMinPixelComponentSize(), this.getMaxPixelComponentSize() );
+		loadStoredLabelingFramesAndSegmentCosts();
 
 	}
 
@@ -122,7 +123,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public LabelingFrames getLabelingsAfterCreationFromScratch() {
 		if ( this.labelingFrames == null ) {
-			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE ); //TODO check if fetching is correct
+			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
 			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
 			labelingFrames.setMinSegmentSize( minHypothesisSize );
 			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
@@ -595,7 +596,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	}
 
-	private void loadStoredLabelingFrames() {
+	private void loadStoredLabelingFramesAndSegmentCosts() {
 		// Loading hypotheses labeling frames if exist in project folder
 		try {
 			hypothesesFolder = dataFolder.addFolder( FOLDER_LABELING_FRAMES );
@@ -606,25 +607,32 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			ioe.printStackTrace();
 		}
 
-		// Loading stored PGraph and solution if exist in project folder
-		final ProjectFile pgFile = parentModel.getProjectFolder().getFile( FILENAME_PGRAPH ); //TODO Need to implement loading of problem graphs if exists already in project folder
-//		if ( pgFile.exists() ) {
-//			this.tr2dTraProblem =
-//					new Tr2dTrackingProblem( this, tr2dModel.getFlowModel(), appearanceCosts, moveCosts, divisionCosts, disappearanceCosts );
-//			boolean success;
-//			try {
-//				success = tr2dTraProblem.getSerializer().loadPGraph( tr2dTraProblem, pgFile.getFile() );
-//			} catch ( final IOException e1 ) {
-//				success = false;
-//				e1.printStackTrace();
-//			}
-//
-//		}
+		// Loading stored PGraph if exists in project folder
+		final ProjectFile pgFile = parentModel.getProjectFolder().getFile( FILENAME_PGRAPH );
+		if ( pgFile.exists() && pgFile.canRead() ) {
+			populateSegmentCostsFromStoredProblemGraphFile( pgFile );
+			savedCostsLoaded = true;
+		} else {
+			savedCostsLoaded = false; //TODO Throw warning that costs are missing.
+		}
 
 	}
 
-	public void purgeSegmentationData() {
-		dataFolder.getFile( FILENAME_PGRAPH ).getFile().delete();
+	private void populateSegmentCostsFromStoredProblemGraphFile( ProjectFile pgFile ) {
+
+		Map< Integer, Double > mapId2Costs = Utils.readProblemGraphFileAndCreateCostIdMap( pgFile );
+		for ( int frame = 0; frame < labelingFrames.getNumFrames(); frame++ ) {
+			List< LabelingSegment > labelingSegmentsForFrame = labelingFrames.getSegments( frame );
+			for ( LabelingSegment labelingSegment : labelingSegmentsForFrame ) {
+				Double retrivedCost = mapId2Costs.get( labelingSegment.getId() );
+				costs.put( labelingSegment, retrivedCost );
+			}
+		}
+
+	}
+
+	public void purgeSegmentationData() { //TODO Inspect again
+		parentModel.getProjectFolder().getFile( FILENAME_PGRAPH ).getFile().delete();
 		try {
 			dataFolder.getFolder( FOLDER_LABELING_FRAMES ).deleteContent();
 		} catch ( final IOException e ) {
@@ -632,11 +640,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				MetaSegLog.log.error( "Labeling frames exist but cannot be deleted." );
 			}
 		}
+//		if ( !( costs == null ) ) {
+//			costs.clear();
+//		}
 
 	}
 
 	public void saveLabelingFrames() {
 		labelingFrames.saveTo( hypothesesFolder, progressListeners );
+	}
+
+	public boolean isSavedLabelingFramesAndCostsLoaded() {
+		return savedCostsLoaded;
 	}
 
 }
