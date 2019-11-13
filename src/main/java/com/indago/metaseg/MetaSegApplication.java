@@ -411,7 +411,7 @@ public class MetaSegApplication {
 			quit( 0 );
 		}
 
-		final File projectFolderBasePath = checkWritableFolderOption(cmd, "p", "project folder");
+		File projectFolderBasePath = checkWritableFolderOption( cmd, "p", "project folder" );
 
 		inputStack = null;
 		if ( cmd.hasOption( "i" ) ) {
@@ -449,9 +449,9 @@ public class MetaSegApplication {
 		if ( cmd.hasOption( shortOption ) ) {
 			result = new File( cmd.getOptionValue( shortOption ) );
 			if ( !result.exists() )
-				showErrorAndExit(1, "Given " + displayName + " does not exist!");
+				result = showErrorAndLoadResources( "Given " + displayName + " does not exist!" );
 			if ( !result.isDirectory() )
-				showErrorAndExit(2, "Given " + displayName + " is not a folder!");
+				result = showErrorAndLoadResources( "Given " + displayName + " is not a folder!" );
 			if ( !result.canWrite() )
 				showErrorAndExit(3, "Given " + displayName + " cannot be written to!");
 		}
@@ -469,6 +469,28 @@ public class MetaSegApplication {
 				"Argument Error", JOptionPane.ERROR_MESSAGE);
 		log.error(msg);
 		quit(exit_value);
+	}
+
+	public File showErrorAndLoadResources( final String msg, final Object... data ) {
+		JOptionPane.showMessageDialog(
+				guiFrame,
+				String.format( msg, data ),
+				"Argument Error",
+				JOptionPane.ERROR_MESSAGE );
+		log.warn( msg );
+		File file = null;
+		try {
+			file = new File( getAbsolutePath( "/data" ) );
+		} catch ( IOException e ) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println( file.getAbsolutePath() );
+		return file;
+	}
+
+	private String getAbsolutePath( String fileName ) throws IOException {
+		return Thread.currentThread().getContextClassLoader().getResource( fileName ).getFile();
 	}
 
 	private void openProjectFolder(final File projectFolderBasePath) {

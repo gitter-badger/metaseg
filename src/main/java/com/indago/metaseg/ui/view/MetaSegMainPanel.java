@@ -26,6 +26,7 @@ import org.scijava.ui.behaviour.io.yaml.YamlConfigIO;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import com.indago.IndagoLog;
+import com.indago.labeleditor.core.model.LabelEditorModel;
 import com.indago.log.LoggingPanel;
 import com.indago.metaseg.MetaSegContext;
 import com.indago.metaseg.MetaSegLog;
@@ -105,7 +106,9 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		tabSolution = new MetaSegSolutionPanel( model.getSolutionModel() );
 		
 		// === TAB LEVERAGED-EDITING =======================================================================
-		tabLevEditing = new MetaSegLevEditingPanel( model.getSolutionModel() );
+//		tabLevEditing = new MetaSegLevEditingPanel( model.getSolutionModel() );
+		LabelEditorModel labelEditorModel = MetaSegLevEditingPanel.buildLabelEditorModel( model.getSolutionModel() );
+		tabLevEditing = new MetaSegLevEditingPanel( model.getSolutionModel(), labelEditorModel );
 
 		// --- ASSEMBLE PANEL ---------------------------------------------------------------------
 		

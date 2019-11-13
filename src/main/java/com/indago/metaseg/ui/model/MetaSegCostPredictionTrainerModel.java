@@ -121,7 +121,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return parentModel;
 	}
 
-	public LabelingFrames getLabelingsAfterCreationFromScratch() {
+	public LabelingFrames createLabelingsFromScratch() {
 		if ( this.labelingFrames == null ) {
 			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
 			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
@@ -316,7 +316,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		badHypotheses = new ArrayList< ValuePair< LabelingSegment, Integer > >();
 	}
 
-	private List< ValuePair< LabelingSegment, Integer > > getAllSegsWithIdAndTime() {
+	public List< ValuePair< LabelingSegment, Integer > > getAllSegsWithIdAndTime() {
 		List< List< LabelingSegment > > allSegsAllTime = new ArrayList< List< LabelingSegment > >( labelingFrames.getSegments() );
 		List< ValuePair< LabelingSegment, Integer > > allSegsWithIdAndTime = new ArrayList<>();
 		for ( int time = 0; time < allSegsAllTime.size(); time++ ) {
@@ -481,7 +481,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return hypothesis;
 	}
 
-	private void modifyPredictionSet() {
+	public void modifyPredictionSet() {
 		predictionSet.removeAll( goodHypotheses );
 		predictionSet.removeAll( badHypotheses );
 	}
@@ -491,6 +491,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			extractFeatures();
 		}
 
+	}
+
+	public List< ValuePair< LabelingSegment, Integer > > getAllSegsWithTime() {
+		return allSegsWithTime;
+	}
+
+	public void addToGood( ValuePair< LabelingSegment, Integer > segment ) {
+		goodHypotheses.add( segment );
+	}
+
+	public void addToBad( ValuePair< LabelingSegment, Integer > segment ) {
+		badHypotheses.add( segment );
 	}
 
 	private void extractFeatures() throws Exception {

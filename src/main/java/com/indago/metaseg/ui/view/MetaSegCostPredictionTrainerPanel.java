@@ -224,7 +224,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
 		MetaSegLog.segmenterLog.info( "Done!" );
 		model.getParentModel().getSolutionModel().populateBdv();
-		model.getParentModel().getMainPanel().getTabLevEdit().populateBdv();
+//		model.getParentModel().getMainPanel().getTabLevEdit().populateBdv();
 
 	}
 
@@ -252,13 +252,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	}
 
 	private void actionFetch() {
-		for ( final ProgressListener progressListener : progressListeners ) {
-			progressListener.resetProgress( "Purging currently fetched segment hypotheses... (1/3)", 3 );
-		}
-		for ( final ProgressListener progressListener : progressListeners ) {
-			progressListener.hasProgressed( "Purging currently fetched segment hypotheses... (2/3)" );
-		}
-		// purge segmentation data
+
 		model.purgeSegmentationData();
 		processSegmentationInputs();
 		MetaSegLog.log.info( "Segmentation results fetched!" );
@@ -300,7 +294,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	private void processSegmentationInputs() {
 //		parseAndSetParametersInModel();
-		model.getLabelingsAfterCreationFromScratch();
+		model.createLabelingsFromScratch();
 		model.getConflictGraphs();
 		model.getConflictCliques();
 		model.saveLabelingFrames();

@@ -1,266 +1,206 @@
 package com.indago.metaseg.ui.view;
 
-import java.awt.BorderLayout;
-import java.awt.Frame;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
-import java.util.ArrayList;
+import java.awt.Dimension;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JSplitPane;
 
-import org.scijava.ui.behaviour.ClickBehaviour;
-import org.scijava.ui.behaviour.io.InputTriggerConfig;
-import org.scijava.ui.behaviour.util.Behaviours;
+import org.scijava.Context;
+import org.scijava.app.StatusService;
+import org.scijava.io.IOService;
+import org.scijava.log.LogService;
+import org.scijava.widget.WidgetService;
 
-import com.indago.data.segmentation.LabelData;
 import com.indago.data.segmentation.LabelingSegment;
+import com.indago.fg.Assignment;
+import com.indago.labeleditor.core.LabelEditorPanel;
+import com.indago.labeleditor.core.model.DefaultLabelEditorModel;
+import com.indago.labeleditor.core.model.LabelEditorModel;
+import com.indago.labeleditor.core.model.tagging.LabelEditorTag;
+import com.indago.labeleditor.core.view.LabelEditorTargetComponent;
+import com.indago.labeleditor.plugin.behaviours.ConflictSelectionBehaviours;
+import com.indago.labeleditor.plugin.interfaces.bdv.LabelEditorBdvPanel;
+import com.indago.metaseg.MetaSegContext;
+import com.indago.metaseg.MetaSegLog;
+import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
+import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
+import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
-import com.indago.metaseg.ui.util.SolutionVisualizer;
-import com.indago.ui.bdv.BdvWithOverlaysOwner;
+import com.indago.metaseg.ui.model.MetaSegTags;
+import com.indago.pg.IndicatorNode;
+import com.indago.pg.segments.SegmentNode;
+import com.indago.plugins.seg.IndagoSegmentationPlugin;
+import com.indago.plugins.seg.IndagoSegmentationPluginService;
 
-import bdv.util.Bdv;
-import bdv.util.BdvHandlePanel;
-import bdv.util.BdvOverlay;
-import bdv.util.BdvSource;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
-import net.imglib2.RealRandomAccess;
-import net.imglib2.converter.Converters;
-import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
+import io.scif.codec.CodecService;
+import io.scif.formats.qt.QTJavaService;
+import io.scif.formats.tiff.TiffService;
+import io.scif.img.IO;
+import io.scif.img.ImgUtilityService;
+import io.scif.img.converters.PlaneConverterService;
+import io.scif.services.DatasetIOService;
+import io.scif.services.FilePatternService;
+import io.scif.services.FormatService;
+import io.scif.services.InitializeService;
+import io.scif.services.JAIIIOService;
+import io.scif.services.LocationService;
+import io.scif.services.TranslatorService;
+import io.scif.xml.XMLService;
+import net.imagej.DatasetService;
+import net.imagej.ImgPlus;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imagej.ops.OpMatchingService;
+import net.imagej.ops.OpService;
+import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImg;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.basictypeaccess.array.IntArray;
+import net.imglib2.roi.IterableRegion;
+import net.imglib2.roi.Regions;
 import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.roi.labeling.LabelingType;
-import net.imglib2.type.BooleanType;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.util.ConstantUtils;
 import net.imglib2.util.ValuePair;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-import net.miginfocom.swing.MigLayout;
 
-public class MetaSegLevEditingPanel extends JPanel implements ActionListener, BdvWithOverlaysOwner {
+public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEditorBdvPanel {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = -2148493794258482330L;
-	private final MetaSegSolverModel model;
-	private JButton btnForceSelect;
-	private JButton btnForceRemove;
-	private BdvHandlePanel bdvHandlePanel;
-	private List< BdvSource > bdvSources = new ArrayList<>();
-	private List< BdvSource > bdvOverlaySources = new ArrayList<>();
-	private List< BdvOverlay > overlays = new ArrayList<>();
-	private MouseMotionListener mml;
-	protected ImgLabeling< LabelData, IntType > labelingFrames;
-	protected RealPoint mousePointer;
-	private ArrayList< LabelingSegment > segmentsUnderMouse;
-	private int selectedIndex;
-	private ValuePair< LabelingSegment, Integer > highlightedSegment;
-	private final LinkedRandomAccessible< IntType > highlightedSegmentRai =
-			new LinkedRandomAccessible<>( ConstantUtils.constantRandomAccessible( new IntType(), 2 ) ); //TODO Change 2 to match 2D/3D image
+	public MetaSegLevEditingPanel( MetaSegSolverModel solutionModel, LabelEditorModel labelEditorModel ) {
+		init( solutionModel.getModel().getRawData(), labelEditorModel );
+	}
 
-	public MetaSegLevEditingPanel( MetaSegSolverModel solutionModel ) {
-		super( new BorderLayout() );
-		this.model = solutionModel;
-		buildGui();
-		populateBdv();
-		this.mml = new MouseMotionListener() {
+	public static LabelEditorModel buildLabelEditorModel( MetaSegSolverModel model ) {
+		LabelEditorModel labelEditorModel = new DefaultLabelEditorModel<>();
+		ArrayImg< IntType, IntArray > backing =
+				ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
+		ImgLabeling< SegmentNode, IntType > labels = new ImgLabeling<>( backing );
+		labelEditorModel.init( labels );
 
-			@Override
-			public void mouseDragged( MouseEvent e ) {
-			}
+		for ( int bdvTime = 0; bdvTime < model.getModel().getNumberOfFrames(); bdvTime++ ) {
+			if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
+				IntervalView< LabelingType< SegmentNode > > slice = Views.hyperSlice( labels, 2, bdvTime );
+				final Assignment< IndicatorNode > solution = model.getPgSolution( bdvTime );
+				if ( solution != null ) {
+					for ( final SegmentNode segVar : model.getProblems().get( bdvTime ).getSegments() ) {
+						IterableRegion< ? > region = segVar.getSegment().getRegion();
+						Regions.sample( region, slice ).forEach( t -> t.add( segVar ) );
+						MetaSegTags tag;
+						if ( solution.getAssignment( segVar ) == 1 ) {
+							labelEditorModel.tagging().addTag( LabelEditorTag.SELECTED, segVar );
+						} else {
+							tag = MetaSegTags.ILP_DISAPPROVED;
+						}
 
-			@Override
-			public void mouseMoved( MouseEvent e ) {
-				mousePointer = new RealPoint( 3 );
-				bdvHandlePanel.getViewerPanel().getGlobalMouseCoordinates( mousePointer );
-				final int x = ( int ) mousePointer.getFloatPosition( 0 );
-				final int y = ( int ) mousePointer.getFloatPosition( 1 );
-				final int z = ( int ) mousePointer.getFloatPosition( 2 );
-				if ( !model.getPgSolutions().isEmpty() && !( model.getPgSolutions() == null ) ) {
-					int time = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
-					labelingFrames =
-							model.getModel().getCostTrainerModel().getAlreadyExistingLabelingFrames().getLabelingPlusForFrame( time ).getLabeling();
-					findSegments( x, y, z, time );
-					if ( !( segmentsUnderMouse.isEmpty() ) ) {
-						highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( 0 ), time );
-						JComponent component = ( JComponent ) e.getSource();
-						LabelingSegment ls = highlightedSegment.getA();
-						component.setToolTipText( "Cost of segment: " + model.getModel().getCostTrainerModel().getCost( ls ) );
-						showHighlightedSegment();
-						setSelectedIndex( 0 );
 					}
-
 				}
 
 			}
+		}
 
-		};
-		bdvHandlePanel.getBdvHandle().getViewerPanel().getDisplay().addMouseMotionListener( this.mml );
-		final Behaviours behaviours = new Behaviours( new InputTriggerConfig(), new String[] { "metaseg" } );
-		behaviours.install( bdvHandlePanel.getBdvHandle().getTriggerbindings(), "my-new-behaviours" );
-		behaviours.behaviour(
-				new ClickBehaviour() {
-
-					@Override
-					public void click( int x, int y ) {
-						browseSegments( x, y, bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint() );
-
-					}
-				},
-				"browse segments",
-				"P" );
+		return labelEditorModel;
 	}
 
-	protected void browseSegments( int x, int y, int time ) {
-		if ( !( segmentsUnderMouse == null ) && !( segmentsUnderMouse.isEmpty() ) ) {
-			if ( segmentsUnderMouse.size() > 1 ) {
-				int idx = getSelectedIndex();
-				if ( idx == segmentsUnderMouse.size() - 1 ) {
-					setSelectedIndex( 0 );
-					highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( selectedIndex ), time );
-					showHighlightedSegment();
-				} else {
-					setSelectedIndex( idx + 1 );
-					highlightedSegment = new ValuePair< LabelingSegment, Integer >( segmentsUnderMouse.get( selectedIndex ), time );
-					showHighlightedSegment();
-				}
+
+	public static void main( String... args ) {
+
+		JPanel panel = buildMetaSegEditingPanel();
+		JFrame frame = new JFrame( "Label editor" );
+		JPanel parent = new JPanel();
+		frame.setContentPane( parent );
+		frame.setMinimumSize( new Dimension( 500, 500 ) );
+		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+		parent.add( panel );
+		frame.pack();
+		frame.setVisible( true );
+	}
+
+	private static < T extends RealType< T > > JPanel buildMetaSegEditingPanel() {
+
+		final Context context =
+				new Context( FormatService.class, OpService.class, OpMatchingService.class, IOService.class, DatasetIOService.class, LocationService.class, DatasetService.class, ImgUtilityService.class, StatusService.class, TranslatorService.class, QTJavaService.class, TiffService.class, CodecService.class, JAIIIOService.class, LogService.class, IndagoSegmentationPluginService.class, PlaneConverterService.class, InitializeService.class, XMLService.class, FilePatternService.class, WidgetService.class );
+		MetaSegContext.segPlugins = context.getService( IndagoSegmentationPluginService.class );
+
+		Img input = IO.openImgs( LabelEditorPanel.class.getResource( "/raw.tif" ).getPath() ).get( 0 );
+		ImgPlus< T > data = new ImgPlus< T >( input, "input", new AxisType[] { Axes.X, Axes.Y, Axes.TIME } );
+		MetasegProjectFolder projectFolder = null;
+		try {
+			projectFolder = new MetasegProjectFolder( new File( "/Users/prakash/Desktop/metasegData/c.elegans/metaseg_small" ) );
+			projectFolder.initialize();
+		} catch ( IOException e ) {
+			e.printStackTrace();
+		}
+
+		final MetaSegModel model = new MetaSegModel( projectFolder, data );
+
+		for ( final String name : MetaSegContext.segPlugins.getPluginNames() ) {
+			final IndagoSegmentationPlugin segPlugin =
+					MetaSegContext.segPlugins.createPlugin(
+							name,
+							model.getProjectFolder(),
+							model.getRawData(),
+							MetaSegLog.segmenterLog );
+			if ( segPlugin.isUsable() ) {
+				model.getSegmentationModel().addPlugin( segPlugin );
 			}
 		}
 
-	}
+		//fetch segments:
+		MetaSegCostPredictionTrainerModel costTrainerModel = model.getCostTrainerModel();
+		costTrainerModel.createLabelingsFromScratch();
+		costTrainerModel.getConflictGraphs();
+		costTrainerModel.getConflictCliques();
 
+		//prepare training data
+		costTrainerModel.setAllSegAndCorrespTime();
+		costTrainerModel.randomizeSegmentsAndPrepData();
+//		costTrainerModel.getTrainingData();
 
-	protected void setSelectedIndex( int i ) {
-		selectedIndex = i;
-	}
-
-	public int getSelectedIndex() {
-		return selectedIndex;
-	}
-
-	protected void showHighlightedSegment() {
-		RandomAccessibleInterval< ? extends BooleanType< ? > > region = highlightedSegment.getA().getRegion();
-		RandomAccessibleInterval< IntType > ret = Converters.convert( region, ( in, out ) -> out.set( in.get() ? 1 : 0 ), new IntType() );
-		highlightedSegmentRai.setSource( ret );
-		bdvHandlePanel.getViewerPanel().setTimepoint( highlightedSegment.getB() );
-		bdvHandlePanel.getViewerPanel().requestRepaint();
-	}
-
-	protected ArrayList< LabelingSegment > findSegments( final int x, final int y, int z, int time ) {
-		segmentsUnderMouse = new ArrayList<>();
-		final RealRandomAccess< LabelingType< LabelData > > a = Views
-				.interpolate(
-						Views.extendValue( labelingFrames, labelingFrames.firstElement().createVariable() ),
-						new NearestNeighborInterpolatorFactory<>() )
-				.realRandomAccess();
-
-		a.setPosition( new int[] { x, y } );
-		for ( LabelData labelData : a.get() ) {
-			segmentsUnderMouse.add( labelData.getSegment() );
+		//mark a few good or bad
+		List< ValuePair< LabelingSegment, Integer > > segms = costTrainerModel.getAllSegsWithTime();
+		for ( int i = 0; i < 10; i++ ) {
+			costTrainerModel.addToGood( segms.get( i ) );
 		}
-		return segmentsUnderMouse;
-
-	}
-
-
-	private void buildGui() {
-		final JPanel viewer = new JPanel( new BorderLayout() );
-
-		if ( model.getModel().is2D() ) {
-			bdvHandlePanel = new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-					.options()
-					.is2D()
-					.inputTriggerConfig( model.getModel().getDefaultInputTriggerConfig() ) );
-		} else {
-			bdvHandlePanel = new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-					.options() );
+		for ( int i = 10; i < 18; i++ ) {
+			costTrainerModel.addToBad( segms.get( i ) );
 		}
-		//This gives 2D/3D bdv panel for leveraged editing
-		bdvAdd( model.getRawData(), "RAW" );
-		viewer.add( bdvHandlePanel.getViewerPanel(), BorderLayout.CENTER );
+		costTrainerModel.modifyPredictionSet();
 
-		final MigLayout layout = new MigLayout( "", "[][grow]", "" );
-		final JPanel controls = new JPanel( layout );
-
-		final JPanel panelEdit = new JPanel( new MigLayout() );
-		panelEdit.setBorder( BorderFactory.createTitledBorder( "leveraged editing" ) );
-
-		btnForceSelect = new JButton( "force select" );
-		btnForceSelect.addActionListener( this );
-		btnForceRemove = new JButton( "force remove" );
-		btnForceRemove.addActionListener( this );
-		panelEdit.add( btnForceSelect, "growx, wrap" );
-		panelEdit.add( btnForceRemove, "growx, wrap" );
-
-		controls.add( panelEdit, "growx, wrap" );
-
-		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
-		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
-		this.add( splitPane, BorderLayout.CENTER );
-
-	}
-
-	@Override
-	public void actionPerformed( ActionEvent e ) {
-		if ( e.getSource().equals( btnForceSelect ) ) {
-	}else if (e.getSource().equals( btnForceRemove )) {
+		//compute solution
+//		costTrainerModel.bdvRemoveAll();
+//		costTrainerModel.bdvAdd( model.getRawData(), "RAW" );
+		try {
+			costTrainerModel.startTrainingPhase();
+		} catch ( Exception e ) {
+			e.printStackTrace();
 		}
+		costTrainerModel.computeAllCosts();
+		costTrainerModel.getParentModel().getSolutionModel().run();
+
+		MetaSegLog.segmenterLog.info( "Done!" );
+
+
+		MetaSegSolverModel solutionModel = model.getSolutionModel();
+		LabelEditorModel labelEditorModel = buildLabelEditorModel( solutionModel );
+//		tagChosenInSolution( solutionModel );
+		MetaSegLevEditingPanel< T > labelEditorPanel = new MetaSegLevEditingPanel< T >( solutionModel, labelEditorModel );
+//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
+		labelEditorPanel.view().colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
+		labelEditorPanel.view().colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
+		new ConflictSelectionBehaviours< T >( labelEditorPanel.model(), labelEditorPanel.control() )
+				.install( labelEditorPanel.control().interfaceInstance().behaviours(), labelEditorPanel );
+		return labelEditorPanel;
 	}
 
-	public void populateBdv() {
-		bdvRemoveAll();
-		bdvAdd( model.getRawData(), "RAW" );
-		final int bdvTime = bdvHandlePanel.getViewerPanel().getState().getCurrentTimepoint();
-		if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
-			RandomAccessibleInterval< IntType > imgSolution = SolutionVisualizer.drawSolutionSegmentImages( this.model );
-			bdvAdd( imgSolution, "solution", 0, 2, new ARGBType( 0x00FF00 ), true );
-		}
-		bdvAdd(
-				Views.interval( Views.addDimension( highlightedSegmentRai ), model.getRawData() ),
-				"lev. edit",
-				0,
-				2,
-				new ARGBType( 0x00BFFF ),
-				true );
-	}
+//	public static void tagChosenInSolution( MetaSegSolverModel solutionModel ) {
+//		for 
+//		
+//	}
 
-	@Override
-	public BdvHandlePanel bdvGetHandlePanel() {
-		return bdvHandlePanel;
-	}
-
-	@Override
-	public void bdvSetHandlePanel( final BdvHandlePanel bdvHandlePanel ) {
-		this.bdvHandlePanel = bdvHandlePanel;
-	}
-
-	@Override
-	public List< BdvSource > bdvGetSources() {
-		return this.bdvSources;
-	}
-
-	@Override
-	public < T extends RealType< T > & NativeType< T > > BdvSource bdvGetSourceFor( RandomAccessibleInterval< T > img ) {
-		return null;
-	}
-
-	@Override
-	public List< BdvSource > bdvGetOverlaySources() {
-		return this.bdvOverlaySources;
-	}
-
-	@Override
-	public List< BdvOverlay > bdvGetOverlays() {
-		return this.overlays;
-	}
 }
