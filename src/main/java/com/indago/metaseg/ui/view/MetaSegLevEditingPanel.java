@@ -8,6 +8,7 @@ import java.util.List;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import net.miginfocom.swing.MigLayout;
 import org.scijava.Context;
 import org.scijava.app.StatusService;
 import org.scijava.io.IOService;
@@ -78,7 +79,7 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 
 	public void populateBdv( MetaSegSolverModel solutionModel ) {
 		LabelEditorModel labelEditorModel = buildLabelEditorModel( solutionModel );
-		init( solutionModel.getModel().getRawData(), labelEditorModel );
+		init( labelEditorModel );
 	}
 
 	public static LabelEditorModel buildLabelEditorModel( MetaSegSolverModel model ) {
@@ -113,6 +114,8 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
+
+		labelEditorModel.options().setTimeDimension(2);
 		return labelEditorModel;
 	}
 
@@ -121,11 +124,11 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 
 		JPanel panel = buildMetaSegEditingPanel();
 		JFrame frame = new JFrame( "Label editor" );
-		JPanel parent = new JPanel();
+		JPanel parent = new JPanel(new MigLayout("fill"));
 		frame.setContentPane( parent );
 		frame.setMinimumSize( new Dimension( 500, 500 ) );
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-		parent.add( panel );
+		parent.add( panel, "push, grow, span" );
 		frame.pack();
 		frame.setVisible( true );
 	}
@@ -203,8 +206,7 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
-		new ConflictSelectionBehaviours< T >( labelEditorPanel.model(), labelEditorPanel.control() )
-				.install( labelEditorPanel.control().interfaceInstance().behaviours(), labelEditorPanel );
+		labelEditorPanel.control().install(new ConflictSelectionBehaviours< T >());
 		return labelEditorPanel;
 	}
 
