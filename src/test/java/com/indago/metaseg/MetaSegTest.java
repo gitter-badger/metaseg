@@ -101,7 +101,6 @@ public class MetaSegTest {
 		//prepare training data
 		costTrainerModel.setAllSegAndCorrespTime();
 		costTrainerModel.randomizeSegmentsAndPrepData();
-//		costTrainerModel.getTrainingData();
 
 		//mark a few good or bad
 		List< ValuePair< LabelingSegment, Integer > > segms = costTrainerModel.getAllSegsWithIdAndTime();
@@ -113,9 +112,6 @@ public class MetaSegTest {
 		}
 		costTrainerModel.modifyPredictionSet();
 
-		//compute solution
-//		costTrainerModel.bdvRemoveAll();
-//		costTrainerModel.bdvAdd( model.getRawData(), "RAW" );
 		try {
 			costTrainerModel.startTrainingPhase();
 		} catch ( Exception e ) {
@@ -127,13 +123,6 @@ public class MetaSegTest {
 		MetaSegLog.segmenterLog.info( "Done!" );
 
 		MetaSegSolverModel solutionModel = model.getSolutionModel();
-
-//		ImgLabeling< SegmentNode, IntType > labeling0 = buildLabelings( 0, solutionModel );
-//		ImgLabeling< SegmentNode, IntType > labeling1 = buildLabelings( 1, solutionModel );
-//
-//		List<ImgLabeling<SegmentNode, IntType>> labellist = new ArrayList<>();
-//		labellist.add(labeling0);
-//		labellist.add(labeling1);
 
 	}
 }
