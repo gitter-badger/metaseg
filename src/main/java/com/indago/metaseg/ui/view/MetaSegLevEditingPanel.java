@@ -72,7 +72,12 @@ import net.imglib2.view.Views;
 
 public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEditorBdvPanel {
 
-	public MetaSegLevEditingPanel( MetaSegSolverModel solutionModel, LabelEditorModel labelEditorModel ) {
+	public MetaSegLevEditingPanel( MetaSegSolverModel solutionModel ) {
+		init( solutionModel.getModel().getRawData() );
+	}
+
+	public void populateBdv( MetaSegSolverModel solutionModel ) {
+		LabelEditorModel labelEditorModel = buildLabelEditorModel( solutionModel );
 		init( solutionModel.getModel().getRawData(), labelEditorModel );
 	}
 
@@ -104,6 +109,10 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 			}
 		}
 
+		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
+		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
+		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
+		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
 		return labelEditorModel;
 	}
 
@@ -131,7 +140,7 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		ImgPlus< T > data = new ImgPlus< T >( input, "input", new AxisType[] { Axes.X, Axes.Y, Axes.TIME } );
 		MetasegProjectFolder projectFolder = null;
 		try {
-			projectFolder = new MetasegProjectFolder( new File( "/Users/prakash/Desktop/metasegData/c.elegans/metaseg_small" ) );
+			projectFolder = new MetasegProjectFolder( new File( "/Users/prakash/Git-repos/metaseg/src/main/resources/data/metaseg_small" ) );
 			projectFolder.initialize();
 		} catch ( IOException e ) {
 			e.printStackTrace();
@@ -189,10 +198,11 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		MetaSegSolverModel solutionModel = model.getSolutionModel();
 		LabelEditorModel labelEditorModel = buildLabelEditorModel( solutionModel );
 //		tagChosenInSolution( solutionModel );
-		MetaSegLevEditingPanel< T > labelEditorPanel = new MetaSegLevEditingPanel< T >( solutionModel, labelEditorModel );
-//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
-		labelEditorPanel.view().colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
-		labelEditorPanel.view().colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
+		MetaSegLevEditingPanel< T > labelEditorPanel = new MetaSegLevEditingPanel< T >( solutionModel );
+		labelEditorPanel.populateBdv( solutionModel );
+		//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
+		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
+		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
 		new ConflictSelectionBehaviours< T >( labelEditorPanel.model(), labelEditorPanel.control() )
 				.install( labelEditorPanel.control().interfaceInstance().behaviours(), labelEditorPanel );
 		return labelEditorPanel;

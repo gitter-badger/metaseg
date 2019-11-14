@@ -374,8 +374,8 @@ public class MetaSegApplication {
 //					guiFrame,
 //					msgs,
 //					"Gurobi Error?",
-//					JOptionPane.ERROR_MESSAGE);
-//			quit(98);
+//					JOptionPane.ERROR_MESSAGE );
+//			quit( 98 );
 //		}
 //	}
 

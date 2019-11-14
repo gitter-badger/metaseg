@@ -94,8 +94,8 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 		}
 		MetaSegLog.solverLog.info( "...done!" );
 
-		MetaSegLog.solverLog.info( "Solve using OjAlgo..." );
-//		MetaSegLog.solverLog.info( "Solve using GUROBI..." );
+//		MetaSegLog.solverLog.info( "Solve using OjAlgo..." );
+		MetaSegLog.solverLog.info( "Solve using GUROBI..." );
 		solveFactorGraphInternally();
 		MetaSegLog.solverLog.info( "...done!" );
 
@@ -107,7 +107,7 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 
 		if ( model.hasFrames() ) {
 			for ( int t = 0; t < model.getNumberOfFrames(); t++ ) {
-				MetaSegLog.solverLog.info( String.format( "Solving t = %d with OjAlgo...", t ) );
+//				MetaSegLog.solverLog.info( String.format( "Solving t = %d with OjAlgo...", t ) );
 				MetaSegLog.solverLog.info( String.format( "Solving t = %d with GUROBI...", t ) );
 				//			final Map< IndicatorNode, Variable > varMapper = mfg.getVarmap();
 				final Pair< Assignment< IndicatorNode >, Assignment< Variable > > assmnts = solveFactorGraphInternally( msFactorGraphs.get( t ) );
