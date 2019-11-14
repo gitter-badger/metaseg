@@ -196,6 +196,7 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 					problemWriter.write( " <= 1\n" );
 				}
 			}
+			problemWriter.close();
 		} catch ( final IOException e ) {
 			JOptionPane
 					.showMessageDialog( this, "Cannot write in selected export folder... cancel export!", "File Error", JOptionPane.ERROR_MESSAGE );
