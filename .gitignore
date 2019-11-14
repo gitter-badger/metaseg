@@ -16,3 +16,8 @@
 # other
 *.log
 checkpoint.model
+*.tif
+*.xml
+*segmenter.labeling
+*.props
+*.jfr
