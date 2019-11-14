@@ -35,7 +35,7 @@ public class MetasegPlugin implements Command {
 	public void run() {
 //		final boolean gurobiWorks = GurobiInstaller.install();
 
-//		if(gurobiWorks) {
+//		if ( gurobiWorks ) {
 			final MetaSegApplication app = new MetaSegApplication(opService, tr2dSegmentationPluginService, log);
 			try {
 				app.run( null );
@@ -44,7 +44,7 @@ public class MetasegPlugin implements Command {
 				app.quit( 100 );
 			}
 //		}
-//		else
+//	else
 //			log.warn( "Abort start of MetaSeg, because Gurobi is not working properly." );
 	}
 
