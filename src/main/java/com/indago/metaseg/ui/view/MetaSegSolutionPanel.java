@@ -4,7 +4,6 @@
 package com.indago.metaseg.ui.view;
 
 import java.awt.BorderLayout;
-import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedWriter;
@@ -33,8 +32,7 @@ import com.indago.pg.segments.ConflictSet;
 import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.util.UniversalFileChooser;
 
-import bdv.util.Bdv;
-import bdv.util.BdvHandlePanel;
+import bdv.util.BdvSource;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.miginfocom.swing.MigLayout;
@@ -53,28 +51,39 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	
 	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
 
+	private LabelViewerAndEditorPanel< ? > tabSolutionAndLevEditing;
+
 	public MetaSegSolutionPanel( final MetaSegSolverModel solutionModel ) {
 		super( new BorderLayout() );
 		this.model = solutionModel;
 		buildGui();
+		getLabelEditorBasedSolutionAndLevEditingTab().getSources().forEach(
+				source -> ( ( BdvSource ) source ).setDisplayRange( model.getModel().getMaxRawValue(), model.getModel().getMinRawValue() ) );
 
+	}
+
+	public LabelViewerAndEditorPanel< ? > getLabelEditorBasedSolutionAndLevEditingTab() {
+		return tabSolutionAndLevEditing;
 	}
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
 
-		if ( model.getModel().is2D() ) {
-			model.bdvSetHandlePanel(
-					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-							.options()
-							.is2D() ) );
-		} else {
-			model.bdvSetHandlePanel(
-					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-							.options() ) );
-		} //This gives 2D/3D bdv panel for solution
-		viewer.add( model.bdvGetHandlePanel().getViewerPanel(), BorderLayout.CENTER );
-		model.populateBdv();
+//		if ( model.getModel().is2D() ) {
+//			model.bdvSetHandlePanel(
+//					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
+//							.options()
+//							.is2D() ) );
+//		} else {
+//			model.bdvSetHandlePanel(
+//					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
+//							.options() ) );
+//		} //This gives 2D/3D bdv panel for solution
+//		viewer.add( model.bdvGetHandlePanel().getViewerPanel(), BorderLayout.CENTER );
+//		model.populateBdv();
+
+		tabSolutionAndLevEditing = new LabelViewerAndEditorPanel( model );
+		viewer.add( tabSolutionAndLevEditing, BorderLayout.CENTER );
 
 		final MigLayout layout = new MigLayout( "", "[][grow]", "" );
 		final JPanel controls = new JPanel( layout );
@@ -224,5 +233,6 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 		model.getModel().getCostTrainerModel().selectSegmentForDisplay();
 
 	}
+
 
 }

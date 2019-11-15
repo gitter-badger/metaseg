@@ -49,8 +49,7 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 	private JPanel tabData;
 	private JPanel tabSegmentation;
 	private JPanel tabTraining;
-	private JPanel tabSolution;
-	private MetaSegLevEditingPanel tabLevEditing;
+	private MetaSegSolutionPanel tabSolutionAndLevEdit;
 
 	private BdvHandlePanel bdvData;
 
@@ -102,32 +101,26 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		tabTraining = new MetaSegCostPredictionTrainerPanel( model.getCostTrainerModel() );
 
 		// === TAB SOLUTION =======================================================================
-		tabSolution = new MetaSegSolutionPanel( model.getSolutionModel() );
-		
-		// === TAB LEVERAGED-EDITING =======================================================================
-		tabLevEditing = new MetaSegLevEditingPanel( model.getSolutionModel() );
-
+		tabSolutionAndLevEdit = new MetaSegSolutionPanel( model.getSolutionModel() );
 		// --- ASSEMBLE PANEL ---------------------------------------------------------------------
 		
 		source.getBdvHandle().getViewerPanel().addTimePointListener( t -> {
-			model.getCostTrainerModel().bdvGetHandlePanel().getBdvHandle().getViewerPanel().setTimepoint( t ); //Synchronize all panels to each other
+			model.getCostTrainerModel().bdvGetHandlePanel().getBdvHandle().getViewerPanel().setTimepoint( t ); //Synchronize meta-training panel to data panel
 		} );
 		model.getCostTrainerModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> {
-			model.getSolutionModel().bdvGetHandlePanel().getViewerPanel().setTimepoint( t );
+			tabSolutionAndLevEdit.getLabelEditorBasedSolutionAndLevEditingTab().getInterfaceHandle().getViewerPanel().setTimepoint( t ); //Synchronize solution panel panel to meta-training panel
 		} );
-
-		model.getSolutionModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> {
-			model.getCostTrainerModel().bdvGetHandlePanel().getBdvHandle().getViewerPanel().setTimepoint( t ); //Synchronize all panels to each other
+		tabSolutionAndLevEdit.getLabelEditorBasedSolutionAndLevEditingTab().getInterfaceHandle().getViewerPanel().addTimePointListener( t -> {
+			model.getCostTrainerModel().bdvGetHandlePanel().getBdvHandle().getViewerPanel().setTimepoint( t ); //Synchronize meta-training panel panel to solution panel
 		} );
-		model.getCostTrainerModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> {
+		model.getCostTrainerModel().bdvGetHandlePanel().getViewerPanel().addTimePointListener( t -> { //Synchronize data panel to meta-training panel
 			source.getBdvHandle().getViewerPanel().setTimepoint( t );
 		} );
 
 		tabs.add( "data", tabData );
 		tabs.add( "segments", tabSegmentation );
 		tabs.add( "meta training", tabTraining );
-		tabs.add( "solution", tabSolution );
-		tabs.add( "frame editor", tabLevEditing );
+		tabs.add( "solution", tabSolutionAndLevEdit );
 		tabs.setSelectedComponent( tabTraining );
 
 		splitPane = new JSplitPane( JSplitPane.VERTICAL_SPLIT, tabs, logPanel );
@@ -158,18 +151,6 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 				final InputActionBindings bindings = new InputActionBindings();
 				SwingUtilities.replaceUIActionMap( this, bindings.getConcatenatedActionMap() );
 				SwingUtilities.replaceUIInputMap( this, JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, bindings.getConcatenatedInputMap() );
-
-//				final AbstractActions a = new AbstractActions( bindings, "tabs", conf, new String[] { "tr2d" } );
-//
-//				a.runnableAction(
-//						() -> tabs.setSelectedIndex( Math.min( tabs.getSelectedIndex() + 1, tabs.getTabCount() - 1 ) ),
-//						"next tab",
-//						"COLON" );
-//				a.runnableAction(
-//						() -> tabs.setSelectedIndex( Math.max( tabs.getSelectedIndex() - 1, 0 ) ),
-//						"previous tab",
-//						"COMMA" );
-
 				return conf;
 			} else {
 				MetaSegLog.log.info( "Falling back to default BDV action settings." );
@@ -222,15 +203,13 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		return tabs;
 	}
 
-	public JPanel getTabSolution() {
-		return tabSolution;
+	public MetaSegSolutionPanel getTabSolution() {
+		return tabSolutionAndLevEdit;
 	}
 
 	public JPanel getTabTraining() {
 		return tabTraining;
 	}
 
-	public MetaSegLevEditingPanel getTabLevEdit() {
-		return tabLevEditing;
-	}
+
 }

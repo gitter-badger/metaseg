@@ -12,6 +12,7 @@ import com.indago.fg.FactorGraphFactory;
 import com.indago.fg.MappedFactorGraph;
 import com.indago.fg.UnaryCostConstraintGraph;
 import com.indago.fg.Variable;
+import com.indago.ilp.DefaultLoggingGurobiCallback;
 import com.indago.ilp.SolveGurobi;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.SolveOjalgo;
@@ -24,6 +25,7 @@ import com.indago.ui.bdv.BdvWithOverlaysOwner;
 import bdv.util.BdvHandlePanel;
 import bdv.util.BdvOverlay;
 import bdv.util.BdvSource;
+import gurobi.GRBException;
 import net.imagej.ImgPlus;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
@@ -126,16 +128,16 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 		final UnaryCostConstraintGraph fg = mappedFactorGraph.getFg();
 		final AssignmentMapper< Variable, IndicatorNode > assMapper = mappedFactorGraph.getAssmntMapper();
 		try {
-			ojalgoFGSolver = new SolveOjalgo();
-			final Assignment< Variable > fgSolution = ojalgoFGSolver.solve( fg );
-//			SolveGurobi.GRB_PRESOLVE = 0;
-//			gurobiFGsolver = new SolveGurobi();
+//			ojalgoFGSolver = new SolveOjalgo();
+//			final Assignment< Variable > fgSolution = ojalgoFGSolver.solve( fg );
+			SolveGurobi.GRB_PRESOLVE = 0;
+			gurobiFGsolver = new SolveGurobi();
 
-//			final Assignment< Variable > fgSolution = gurobiFGsolver.solve( fg, new DefaultLoggingGurobiCallback( MetaSegLog.solverLog ) );
+			final Assignment< Variable > fgSolution = gurobiFGsolver.solve( fg, new DefaultLoggingGurobiCallback( MetaSegLog.solverLog ) );
 			final Assignment< IndicatorNode > pgSolution = assMapper.map( fgSolution );
 			return new ValuePair<>( pgSolution, fgSolution );
-//		} catch ( final GRBException e ) {
-//			e.printStackTrace();
+		} catch ( final GRBException e ) {
+			e.printStackTrace();
 		}
 		catch ( final IllegalStateException ise ) {
 			MetaSegLog.solverLog.error( "Model is now infeasible and needs to be retracked!" );

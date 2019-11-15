@@ -30,6 +30,7 @@ import org.scijava.log.Logger;
 import org.scijava.widget.WidgetService;
 
 import com.apple.eawt.Application;
+import com.indago.gurobi.GurobiInstaller;
 import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
 import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.view.MetaSegMainPanel;
@@ -125,7 +126,7 @@ public class MetaSegApplication {
 		// GET THE APP SPECIFIC LOGGER
 		// ---------------------------
 
-//		checkGurobiAvailability();
+		checkGurobiAvailability();
 		parseCommandLineArgs( args );
 
 		guiFrame = new JFrame( "MetaSeg" );
@@ -366,18 +367,18 @@ public class MetaSegApplication {
 	 * Check if GRBEnv can be instantiated. For this to work Gurobi has to be
 	 * installed and a valid license has to be pulled.
 	 */
-//	private void checkGurobiAvailability() {
-//		final String jlp = System.getProperty( "java.library.path" );
-//		if ( !GurobiInstaller.testGurobi() ) {
-//			final String msgs = "Initial Gurobi test threw exception... check your Gruobi setup!\n\nJava library path: " + jlp;
-//			JOptionPane.showMessageDialog(
-//					guiFrame,
-//					msgs,
-//					"Gurobi Error?",
-//					JOptionPane.ERROR_MESSAGE );
-//			quit( 98 );
-//		}
-//	}
+	private void checkGurobiAvailability() {
+		final String jlp = System.getProperty( "java.library.path" );
+		if ( !GurobiInstaller.testGurobi() ) {
+			final String msgs = "Initial Gurobi test threw exception... check your Gruobi setup!\n\nJava library path: " + jlp;
+			JOptionPane.showMessageDialog(
+					guiFrame,
+					msgs,
+					"Gurobi Error?",
+					JOptionPane.ERROR_MESSAGE );
+			quit( 98 );
+		}
+	}
 
 	/**
 	 * Parse command line arguments and set variables accordingly.

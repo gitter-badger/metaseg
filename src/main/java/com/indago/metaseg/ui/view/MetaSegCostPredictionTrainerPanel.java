@@ -222,10 +222,9 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		}
 		model.getParentModel().getSolutionModel().run();
 		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
-		MetaSegLog.segmenterLog.info( "Done!" );
-		model.getParentModel().getSolutionModel().populateBdv();
-		model.getParentModel().getMainPanel().getTabLevEdit().populateBdv( model.getParentModel().getSolutionModel() );
-
+		MetaSegLog.segmenterLog.info( "Done solving!" );
+		MetaSegLog.segmenterLog.info( "Populating the solution ..." );
+		model.getParentModel().getMainPanel().getTabSolution().getLabelEditorBasedSolutionAndLevEditingTab().populateBdv( model.getParentModel().getSolutionModel() );
 	}
 
 	private void actionFetchForManualClassify() {

@@ -8,6 +8,7 @@ import org.ojalgo.netio.BasicLogger;
 import org.ojalgo.optimisation.Expression;
 import org.ojalgo.optimisation.ExpressionsBasedModel;
 import org.ojalgo.optimisation.Optimisation;
+import org.ojalgo.optimisation.solver.gurobi.SolverGurobi;
 
 import com.indago.fg.Assignment;
 import com.indago.fg.Factor;
@@ -50,7 +51,7 @@ public class SolveOjalgo {
 			model.dispose();
 		}
 		
-//		ExpressionsBasedModel.addFallbackSolver( SolverGurobi.INTEGRATION );
+		ExpressionsBasedModel.addFallbackSolver( SolverGurobi.INTEGRATION );
 //		ExpressionsBasedModel.addPreferredSolver( SolverGurobi.INTEGRATION );
 		model = new ExpressionsBasedModel();
 		BasicLogger.debug( SolveOjalgo.class.getSimpleName() );

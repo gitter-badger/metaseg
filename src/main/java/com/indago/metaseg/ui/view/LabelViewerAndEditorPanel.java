@@ -5,10 +5,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
 import org.scijava.Context;
 import org.scijava.app.StatusService;
 import org.scijava.io.IOService;
@@ -70,10 +70,17 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
+import net.miginfocom.swing.MigLayout;
 
-public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEditorBdvPanel {
+public class LabelViewerAndEditorPanel< T extends RealType< T > > extends LabelEditorBdvPanel {
 
-	public MetaSegLevEditingPanel( MetaSegSolverModel solutionModel ) {
+	private final MetaSegSolverModel model;
+	private JButton btnContinueMetatrain;
+	private JButton btnExportSegCompatibleImages;
+	private JButton btnExportLabelFusionProblem;
+
+	public LabelViewerAndEditorPanel( MetaSegSolverModel solutionModel ) {
+		this.model = solutionModel;
 		init( solutionModel.getModel().getRawData() );
 	}
 
@@ -87,7 +94,7 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		ArrayImg< IntType, IntArray > backing =
 				ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
 		ImgLabeling< SegmentNode, IntType > labels = new ImgLabeling<>( backing );
-		labelEditorModel.init( labels );
+		labelEditorModel.init( labels, model.getRawData() );
 
 		for ( int bdvTime = 0; bdvTime < model.getModel().getNumberOfFrames(); bdvTime++ ) {
 			if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
@@ -114,11 +121,13 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
+		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
 
 		labelEditorModel.options().setTimeDimension(2);
 		return labelEditorModel;
 	}
 
+///////////////////////////////////////////////////////////////////Stand alone demo of LabelEditor below /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	public static void main( String... args ) {
 
@@ -200,8 +209,7 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 
 		MetaSegSolverModel solutionModel = model.getSolutionModel();
 		LabelEditorModel labelEditorModel = buildLabelEditorModel( solutionModel );
-//		tagChosenInSolution( solutionModel );
-		MetaSegLevEditingPanel< T > labelEditorPanel = new MetaSegLevEditingPanel< T >( solutionModel );
+		LabelViewerAndEditorPanel< T > labelEditorPanel = new LabelViewerAndEditorPanel< T >( solutionModel );
 		labelEditorPanel.populateBdv( solutionModel );
 		//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
@@ -210,9 +218,6 @@ public class MetaSegLevEditingPanel< T extends RealType< T > > extends LabelEdit
 		return labelEditorPanel;
 	}
 
-//	public static void tagChosenInSolution( MetaSegSolverModel solutionModel ) {
-//		for 
-//		
-//	}
+////////////////////////////////////////////////////////////Demo of LabelEditor ends /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 }
