@@ -118,10 +118,10 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends LabelE
 		}
 
 		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
-		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
+//		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
-		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
+		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 255, 0, 150 ) );
 
 		labelEditorModel.options().setTimeDimension(2);
 		return labelEditorModel;
