@@ -22,7 +22,7 @@ import com.indago.labeleditor.core.model.DefaultLabelEditorModel;
 import com.indago.labeleditor.core.model.LabelEditorModel;
 import com.indago.labeleditor.core.model.tagging.LabelEditorTag;
 import com.indago.labeleditor.core.view.LabelEditorTargetComponent;
-import com.indago.labeleditor.plugin.behaviours.ConflictSelectionBehaviours;
+import com.indago.labeleditor.plugin.behaviours.select.ConflictSelectionBehaviours;
 import com.indago.labeleditor.plugin.interfaces.bdv.LabelEditorBdvPanel;
 import com.indago.metaseg.MetaSegContext;
 import com.indago.metaseg.MetaSegLog;
@@ -87,26 +87,28 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends LabelE
 	public void populateBdv( MetaSegSolverModel solutionModel ) {
 		LabelEditorModel labelEditorModel = buildLabelEditorModel( solutionModel );
 		init( labelEditorModel );
+		control().install( new ConflictSelectionBehaviours< T >() );
 	}
 
 	public static LabelEditorModel buildLabelEditorModel( MetaSegSolverModel model ) {
 		LabelEditorModel labelEditorModel = new DefaultLabelEditorModel<>();
 		ArrayImg< IntType, IntArray > backing =
 				ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
-		ImgLabeling< SegmentNode, IntType > labels = new ImgLabeling<>( backing );
+		ImgLabeling< WrappedSegmentNode, IntType > labels = new ImgLabeling<>( backing );
 		labelEditorModel.init( labels, model.getRawData() );
 
 		for ( int bdvTime = 0; bdvTime < model.getModel().getNumberOfFrames(); bdvTime++ ) {
 			if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
-				IntervalView< LabelingType< SegmentNode > > slice = Views.hyperSlice( labels, 2, bdvTime );
+				IntervalView< LabelingType< WrappedSegmentNode > > slice = Views.hyperSlice( labels, 2, bdvTime );
 				final Assignment< IndicatorNode > solution = model.getPgSolution( bdvTime );
 				if ( solution != null ) {
 					for ( final SegmentNode segVar : model.getProblems().get( bdvTime ).getSegments() ) {
+						WrappedSegmentNode wrappedSegVar = new WrappedSegmentNode( segVar );
 						IterableRegion< ? > region = segVar.getSegment().getRegion();
-						Regions.sample( region, slice ).forEach( t -> t.add( segVar ) );
+						Regions.sample( region, slice ).forEach( t -> t.add( wrappedSegVar ) );
 						MetaSegTags tag;
 						if ( solution.getAssignment( segVar ) == 1 ) {
-							labelEditorModel.tagging().addTag( LabelEditorTag.SELECTED, segVar );
+							labelEditorModel.tagging().addTag( MetaSegTags.ILP_APPROVED, wrappedSegVar );
 						} else {
 							tag = MetaSegTags.ILP_DISAPPROVED;
 						}
@@ -117,13 +119,15 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends LabelE
 			}
 		}
 
-		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
-//		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
+//		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
+		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
 		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
-		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 255, 0, 150 ) );
+		labelEditorModel.colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 255, 0, 150 ) );
+//		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
 
-		labelEditorModel.options().setTimeDimension(2);
+		labelEditorModel.setTimeDimension( 2 );
+
 		return labelEditorModel;
 	}
 
@@ -212,9 +216,9 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends LabelE
 		LabelViewerAndEditorPanel< T > labelEditorPanel = new LabelViewerAndEditorPanel< T >( solutionModel );
 		labelEditorPanel.populateBdv( solutionModel );
 		//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
-		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
-		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
-		labelEditorPanel.control().install(new ConflictSelectionBehaviours< T >());
+//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
+//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
+//		labelEditorPanel.control().install(new ConflictSelectionBehaviours< T >());
 		return labelEditorPanel;
 	}
 
