@@ -14,12 +14,16 @@ import hr.irb.fastRandomForest.FastRandomForest;
 import net.imagej.mesh.Mesh;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
+import net.imagej.ops.geom.geom2d.DefaultBoxivityPolygon;
 import net.imagej.ops.geom.geom2d.DefaultCircularity;
 import net.imagej.ops.geom.geom2d.DefaultContour;
 import net.imagej.ops.geom.geom2d.DefaultConvexityPolygon;
+import net.imagej.ops.geom.geom2d.DefaultEccentricity;
 import net.imagej.ops.geom.geom2d.DefaultPerimeterLength;
 import net.imagej.ops.geom.geom2d.DefaultSizePolygon;
 import net.imagej.ops.geom.geom2d.DefaultSolidityPolygon;
+import net.imagej.ops.geom.geom3d.DefaultBoxivityMesh;
+import net.imagej.ops.geom.geom3d.DefaultCompactness;
 import net.imagej.ops.geom.geom3d.DefaultConvexityMesh;
 import net.imagej.ops.geom.geom3d.DefaultSolidityMesh;
 import net.imagej.ops.geom.geom3d.DefaultSphericity;
@@ -58,16 +62,25 @@ public class MetaSegRandomForestClassifier {
 		buildPolygoneOp = ops.op( DefaultContour.class, image2d, true );
 		Polygon2D poly = buildPolygoneOp.calculate( image2d );
 		Mesh mesh = ops.geom().marchingCubes( ArrayImgs.booleans( new boolean[] { true }, 1, 1, 1 ) );
-		polygonSolidityOp = ops.op( DefaultSolidityPolygon.class, poly );
-		meshSolidityOp = ops.op( DefaultSolidityMesh.class, mesh );
-		polygonConvexityOp = ops.op( DefaultConvexityPolygon.class, poly );
+		polygonSolidityOp = ops.op( DefaultSolidityPolygon.class, poly ); // Area/ConvexArea, signify an object having an irregular boundary, or containing holes
+		meshSolidityOp = ops.op( DefaultSolidityMesh.class, mesh ); // Volume/convex volume
+		polygonConvexityOp = ops.op( DefaultConvexityPolygon.class, poly ); //Ratio of perimeters of convex hull over original contour 
 		meshConvexityOp = ops.op( DefaultConvexityMesh.class, mesh );
-		polygonAreaOp = ops.op( DefaultSizePolygon.class, poly );
-		meshAreaOp = ops.op( DefaultVolumeMesh.class, mesh );
+		polygonAreaOp = ops.op( DefaultSizePolygon.class, poly ); //Area of polygon
+		meshAreaOp = ops.op( DefaultVolumeMesh.class, mesh ); //Volume 
 		polygonPerimeterOp = ops.op( DefaultPerimeterLength.class, poly );
 		meshPerimeterOp = ops.op( DefaultSurfaceArea.class, mesh );
-		polygonCircularityOp = ops.op( DefaultCircularity.class, poly );
-		meshCircularityOp = ops.op( DefaultSphericity.class, mesh );
+		polygonCircularityOp = ops.op( DefaultCircularity.class, poly ); // 4pi(area/perimeter^2)
+		meshCircularityOp = ops.op( DefaultSphericity.class, mesh ); // https://en.wikipedia.org/wiki/Sphericity
+		ops.op( DefaultCompactness.class, poly ); // 4*pi*area/(perimeter^2)
+		ops.op( DefaultCompactness.class, mesh ); // area^3/volume^2
+		ops.op( DefaultEccentricity.class, poly ); // ratio of length of short (minor) axis to length of long (major) axis of an object
+		ops.op( DefaultEccentricity.class, mesh );
+		ops.op( DefaultBoxivityPolygon.class, poly ); //represents how rectangular shape s is, i.e, A_s/A_r, A_r is area of min. bounding rectangle
+		ops.op( DefaultBoxivityMesh.class, mesh );
+		//Also check BoundarySizeConvexHullPolygon, DefaultElongation, Roundness, major axis,minor axis
+		//Look at more features from http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
+		//https://github.com/imagej/imagej-ops/tree/master/src/main/java/net/imagej/ops/geom/geom2d
 	}
 
 	private Instances trainingData;
