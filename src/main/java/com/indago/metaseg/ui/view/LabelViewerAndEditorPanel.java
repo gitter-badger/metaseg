@@ -78,6 +78,7 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 
 	public LabelViewerAndEditorPanel( MetaSegSolverModel solutionModel ) {
 		this.model = solutionModel;
+//		context.inject(this);
 		init( solutionModel.getModel().getRawData() );
 	}
 
@@ -118,14 +119,12 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		}
 
 //		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
-//<<<<<<< HEAD
 ////		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
 //		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
 //		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
 //		labelEditorModel.colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 255, 0, 100 ) );
 ////		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
 
-		labelEditorModel.setTimeDimension( 2 );
 		labelEditorModel.colors().getFocusBorderColor().set( 255, 0, 0, 150);
 		labelEditorModel.colors().getDefaultFaceColor().set(0,0,0,0);
 		labelEditorModel.colors().getDefaultBorderColor().set(0,0,0,0);
@@ -218,10 +217,6 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		MetaSegSolverModel solutionModel = model.getSolutionModel();
 		LabelViewerAndEditorPanel< T > labelEditorPanel = new LabelViewerAndEditorPanel< T >( solutionModel );
 		labelEditorPanel.populateBdv( solutionModel );
-		//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
-//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
-//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
-//		labelEditorPanel.control().install(new ConflictSelectionBehaviours< T >());
 		return labelEditorPanel;
 	}
 

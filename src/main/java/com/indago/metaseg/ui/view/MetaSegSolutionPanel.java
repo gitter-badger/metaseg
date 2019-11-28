@@ -133,7 +133,7 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private void actionExportLabelFusionProblem() {
 		MetaSegLog.segmenterLog.info( "Exporting problem graphs..." );
 		final File projectFolderBasePath = UniversalFileChooser.showLoadFolderChooser(
-				model.bdvGetHandlePanel().getViewerPanel(),
+				tabSolutionAndLevEditing.getInterfaceHandle().getViewerPanel(),
 				"",
 				"Choose folder for problem graph export..." );
 		if ( projectFolderBasePath.exists() && projectFolderBasePath.isDirectory() ) {
@@ -148,7 +148,7 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private void actionExportCurrentSolution() {
 		MetaSegLog.segmenterLog.info( "Exporting SEG compatible images..." );
 		final File projectFolderBasePath = UniversalFileChooser.showLoadFolderChooser(
-				model.bdvGetHandlePanel().getViewerPanel(),
+				tabSolutionAndLevEditing.getInterfaceHandle().getViewerPanel(),
 				"",
 				"Choose folder for SEG format images export..." );
 		if ( projectFolderBasePath.exists() && projectFolderBasePath.isDirectory() ) {
