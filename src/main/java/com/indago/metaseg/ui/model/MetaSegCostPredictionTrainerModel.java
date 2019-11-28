@@ -122,16 +122,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public LabelingFrames createLabelingsFromScratch() {
-		if ( this.labelingFrames == null ) {
 			labelingFrames = new LabelingFrames( parentModel.getSegmentationModel(), 1, Integer.MAX_VALUE );
 			labelingFrames.setMaxSegmentSize( maxHypothesisSize );
 			labelingFrames.setMinSegmentSize( minHypothesisSize );
 			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
 			labelingFrames.processFrames();
-		} else {
-			MetaSegLog.log.info( "...processing LabelFrame inputs..." );
-			labelingFrames.processFrames();
-		}
 
 		return labelingFrames;
 	}
