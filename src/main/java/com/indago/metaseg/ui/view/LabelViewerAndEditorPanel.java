@@ -1,5 +1,20 @@
 package com.indago.metaseg.ui.view;
 
+import java.awt.Dimension;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+import org.scijava.Context;
+import org.scijava.app.StatusService;
+import org.scijava.io.IOService;
+import org.scijava.log.LogService;
+import org.scijava.widget.WidgetService;
+
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.fg.Assignment;
 import sc.fiji.labeleditor.core.model.LabelEditorModel;
@@ -17,6 +32,7 @@ import com.indago.pg.IndicatorNode;
 import com.indago.pg.segments.SegmentNode;
 import com.indago.plugins.seg.IndagoSegmentationPlugin;
 import com.indago.plugins.seg.IndagoSegmentationPluginService;
+
 import io.scif.codec.CodecService;
 import io.scif.formats.qt.QTJavaService;
 import io.scif.formats.tiff.TiffService;
@@ -51,17 +67,6 @@ import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.miginfocom.swing.MigLayout;
-import org.scijava.Context;
-import org.scijava.app.StatusService;
-import org.scijava.io.IOService;
-import org.scijava.log.LogService;
-import org.scijava.widget.WidgetService;
-
-import javax.swing.*;
-import java.awt.*;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSliceLabelEditorBdvPanel {
 
@@ -72,6 +77,7 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 
 	public LabelViewerAndEditorPanel( MetaSegSolverModel solutionModel ) {
 		this.model = solutionModel;
+//		context.inject(this);
 		init( solutionModel.getModel().getRawData() );
 	}
 
@@ -111,6 +117,12 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		}
 
 //		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
+////		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
+//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
+//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
+//		labelEditorModel.colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 255, 0, 100 ) );
+////		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
+
 		labelEditorModel.colors().getFocusBorderColor().set( 255, 0, 0, 150);
 		labelEditorModel.colors().getDefaultFaceColor().set(0,0,0,0);
 		labelEditorModel.colors().getDefaultBorderColor().set(0,0,0,0);
@@ -141,7 +153,7 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 				new Context( FormatService.class, OpService.class, OpMatchingService.class, IOService.class, DatasetIOService.class, LocationService.class, DatasetService.class, ImgUtilityService.class, StatusService.class, TranslatorService.class, QTJavaService.class, TiffService.class, CodecService.class, JAIIIOService.class, LogService.class, IndagoSegmentationPluginService.class, PlaneConverterService.class, InitializeService.class, XMLService.class, FilePatternService.class, WidgetService.class );
 		MetaSegContext.segPlugins = context.getService( IndagoSegmentationPluginService.class );
 
-		Img input = IO.openImgs( LabelEditorPanel.class.getResource( "/raw.tif" ).getPath() ).get( 0 );
+		Img input = IO.openImgs( LabelViewerAndEditorPanel.class.getResource( "/raw.tif" ).getPath() ).get( 0 );
 		ImgPlus< T > data = new ImgPlus< T >( input, "input", new AxisType[] { Axes.X, Axes.Y, Axes.TIME } );
 		MetasegProjectFolder projectFolder = null;
 		try {
@@ -203,10 +215,6 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		MetaSegSolverModel solutionModel = model.getSolutionModel();
 		LabelViewerAndEditorPanel< T > labelEditorPanel = new LabelViewerAndEditorPanel< T >( solutionModel );
 		labelEditorPanel.populateBdv( solutionModel );
-		//		labelEditorPanel.view().colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
-//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
-//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 0, 0, 25, 150 ) );
-//		labelEditorPanel.control().install(new ConflictSelectionBehaviours< T >());
 		return labelEditorPanel;
 	}
 
