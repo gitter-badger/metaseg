@@ -15,7 +15,6 @@ import net.imagej.mesh.Mesh;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.imagej.ops.geom.geom2d.DefaultBoundarySizeConvexHullPolygon;
-import net.imagej.ops.geom.geom2d.DefaultBoxivityPolygon;
 import net.imagej.ops.geom.geom2d.DefaultCircularity;
 import net.imagej.ops.geom.geom2d.DefaultContour;
 import net.imagej.ops.geom.geom2d.DefaultConvexityPolygon;
@@ -23,7 +22,6 @@ import net.imagej.ops.geom.geom2d.DefaultElongation;
 import net.imagej.ops.geom.geom2d.DefaultPerimeterLength;
 import net.imagej.ops.geom.geom2d.DefaultSizePolygon;
 import net.imagej.ops.geom.geom2d.DefaultSolidityPolygon;
-import net.imagej.ops.geom.geom3d.DefaultBoxivityMesh;
 import net.imagej.ops.geom.geom3d.DefaultConvexityMesh;
 import net.imagej.ops.geom.geom3d.DefaultMainElongation;
 import net.imagej.ops.geom.geom3d.DefaultSolidityMesh;
@@ -53,8 +51,8 @@ public class MetaSegRandomForestClassifier {
 	private DefaultCircularity polygonCircularityOp;
 	private DefaultSphericity meshCircularityOp;
 	private DefaultContour buildPolygoneOp;
-	private DefaultBoxivityPolygon polygonBoxivityOp;
-	private DefaultBoxivityMesh meshBoxivityOp;
+//	private DefaultBoxivityPolygon polygonBoxivityOp;
+//	private DefaultBoxivityMesh meshBoxivityOp;
 	private DefaultBoundarySizeConvexHullPolygon polygonBoundarySizeConvexHullOp;
 	private DefaultSurfaceAreaConvexHullMesh meshBoundarySizeConvexHullOp;
 	private DefaultElongation polygonElongationOp;
@@ -81,8 +79,6 @@ public class MetaSegRandomForestClassifier {
 		meshCircularityOp = ops.op( DefaultSphericity.class, mesh ); // https://en.wikipedia.org/wiki/Sphericity
 		polygonSolidityOp = ops.op( DefaultSolidityPolygon.class, poly ); // Area/ConvexArea, signify an object having an irregular boundary, or containing holes
 		meshSolidityOp = ops.op( DefaultSolidityMesh.class, mesh ); // Volume/convex volume
-		polygonBoxivityOp = ops.op( DefaultBoxivityPolygon.class, poly ); //represents how rectangular shape s is, i.e, A_s/A_r, A_r is area of min. bounding rectangle
-		meshBoxivityOp = ops.op( DefaultBoxivityMesh.class, mesh );
 		polygonBoundarySizeConvexHullOp = ops.op( DefaultBoundarySizeConvexHullPolygon.class, poly ); //computes the perimeter of convex hull
 		meshBoundarySizeConvexHullOp = ops.op( DefaultSurfaceAreaConvexHullMesh.class, mesh ); //computes the surface area of convex hull of mesh
 		polygonElongationOp = ops.op( DefaultElongation.class, poly );
@@ -102,7 +98,6 @@ public class MetaSegRandomForestClassifier {
 		attInfo.add( new Attribute( "convexity" ) );
 		attInfo.add( new Attribute( "circularity" ) );
 		attInfo.add( new Attribute( "solidity" ) );
-		attInfo.add( new Attribute( "boxivity" ) );
 		attInfo.add( new Attribute( "boundarysizeconvexhull" ) );
 		attInfo.add( new Attribute( "elongation" ) );
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
@@ -165,8 +160,6 @@ public class MetaSegRandomForestClassifier {
 		double convexity;
 		double circularity;
 		double solidity;
-		double eccentricity;
-		double boxivity;
 		double boundarysizeconvexhull;
 		double elongation;
 		if ( is2D ) {
@@ -176,7 +169,6 @@ public class MetaSegRandomForestClassifier {
 			convexity = polygonConvexityOp.calculate( poly ).get();
 			circularity = polygonCircularityOp.calculate( poly ).get();
 			solidity = polygonSolidityOp.calculate( poly ).get();
-			boxivity = polygonBoxivityOp.calculate( poly ).get();
 			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
 			elongation = polygonElongationOp.calculate( poly ).get();
 		} else {
@@ -186,7 +178,6 @@ public class MetaSegRandomForestClassifier {
 			convexity = meshConvexityOp.calculate( mesh ).get();
 			circularity = meshCircularityOp.calculate( mesh ).get();
 			solidity = meshSolidityOp.calculate( mesh ).get();
-			boxivity = meshBoxivityOp.calculate( mesh ).get();
 			boundarysizeconvexhull = meshBoundarySizeConvexHullOp.calculate( mesh ).get();
 			elongation = meshElongationOp.calculate( mesh ).get();
 		}
@@ -195,7 +186,6 @@ public class MetaSegRandomForestClassifier {
 																	  convexity,
 																	  circularity,
 																	  solidity,
-																	  boxivity,
 																	  boundarysizeconvexhull,
 																	  elongation,
 																	  category } );
