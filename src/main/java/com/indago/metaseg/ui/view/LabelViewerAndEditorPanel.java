@@ -2,10 +2,10 @@ package com.indago.metaseg.ui.view;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.fg.Assignment;
-import com.indago.labeleditor.core.model.LabelEditorModel;
-import com.indago.labeleditor.plugin.behaviours.select.ConflictSelectionBehaviours;
-import com.indago.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorBdvPanel;
-import com.indago.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorModel;
+import sc.fiji.labeleditor.core.model.LabelEditorModel;
+import sc.fiji.labeleditor.plugin.behaviours.select.ConflictSelectionBehaviours;
+import sc.fiji.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorBdvPanel;
+import sc.fiji.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorModel;
 import com.indago.metaseg.MetaSegContext;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
@@ -82,11 +82,10 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 	}
 
 	public static LabelEditorModel buildLabelEditorModel( MetaSegSolverModel model ) {
-		TimeSliceLabelEditorModel labelEditorModel = new TimeSliceLabelEditorModel<>();
 		ArrayImg< IntType, IntArray > backing =
 				ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
 		ImgLabeling< WrappedSegmentNode, IntType > labels = new ImgLabeling<>( backing );
-		labelEditorModel.init( labels, model.getRawData(), 2 );
+		TimeSliceLabelEditorModel labelEditorModel = new TimeSliceLabelEditorModel<>(labels, model.getRawData(), 2);
 
 		for ( int bdvTime = 0; bdvTime < model.getModel().getNumberOfFrames(); bdvTime++ ) {
 			if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
@@ -99,7 +98,7 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 						Regions.sample( region, slice ).forEach( t -> t.add( wrappedSegVar ) );
 						MetaSegTags tag;
 						if ( solution.getAssignment( segVar ) == 1 ) {
-							labelEditorModel.tagging().addTag( MetaSegTags.ILP_APPROVED, wrappedSegVar );
+							labelEditorModel.tagging().addTagToLabel( MetaSegTags.ILP_APPROVED, wrappedSegVar );
 						} else {
 							tag = MetaSegTags.ILP_DISAPPROVED;
 						}
