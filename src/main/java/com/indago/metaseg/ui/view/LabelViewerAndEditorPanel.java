@@ -9,7 +9,6 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import net.imagej.patcher.LegacyInjector;
 import org.scijava.Context;
 import org.scijava.app.StatusService;
 import org.scijava.io.IOService;
@@ -18,10 +17,6 @@ import org.scijava.widget.WidgetService;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.fg.Assignment;
-import sc.fiji.labeleditor.core.model.LabelEditorModel;
-import sc.fiji.labeleditor.plugin.behaviours.select.ConflictSelectionBehaviours;
-import sc.fiji.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorBdvPanel;
-import sc.fiji.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorModel;
 import com.indago.metaseg.MetaSegContext;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
@@ -54,6 +49,7 @@ import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
+import net.imagej.patcher.LegacyInjector;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
@@ -68,6 +64,10 @@ import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.miginfocom.swing.MigLayout;
+import sc.fiji.labeleditor.core.model.LabelEditorModel;
+import sc.fiji.labeleditor.plugin.behaviours.select.ConflictSelectionBehaviours;
+import sc.fiji.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorBdvPanel;
+import sc.fiji.labeleditor.plugin.mode.timeslice.TimeSliceLabelEditorModel;
 
 public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSliceLabelEditorBdvPanel {
 
@@ -82,7 +82,8 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 
 	public LabelViewerAndEditorPanel( MetaSegSolverModel solutionModel ) {
 		this.model = solutionModel;
-//		context.inject(this);
+		Context context = solutionModel.getModel().getContext();
+		context.inject( this );
 		init( solutionModel.getModel().getRawData() );
 	}
 
@@ -121,18 +122,10 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 			System.out.println(labelEditorModel.tagging().get().size());
 		}
 
-//		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).remove( LabelEditorTargetComponent.FACE );
-////		labelEditorModel.colors().get( LabelEditorTag.MOUSE_OVER ).put( LabelEditorTargetComponent.BORDER, ARGBType.rgba( 255, 0, 0, 150 ) );
-//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.FACE );
-//		labelEditorModel.colors().get( LabelEditorTag.DEFAULT ).remove( LabelEditorTargetComponent.BORDER );
-//		labelEditorModel.colors().get( MetaSegTags.ILP_APPROVED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 255, 0, 100 ) );
-////		labelEditorModel.colors().get( LabelEditorTag.SELECTED ).put( LabelEditorTargetComponent.FACE, ARGBType.rgba( 0, 0, 255, 150 ) );
-
 		labelEditorModel.colors().getFocusBorderColor().set( 255, 0, 0, 150);
 		labelEditorModel.colors().getDefaultFaceColor().set(0,0,0,0);
 		labelEditorModel.colors().getDefaultBorderColor().set(0,0,0,0);
 		labelEditorModel.colors().getFaceColor( MetaSegTags.ILP_APPROVED ).set( 0, 255, 0, 150 );
-//		labelEditorModel.colors().getSelectedFaceColor().set( 0, 0, 255, 150 );
 
 		return labelEditorModel;
 	}
@@ -188,10 +181,8 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		costTrainerModel.getConflictGraphs();
 		costTrainerModel.getConflictCliques();
 
-		//prepare training data
 		costTrainerModel.setAllSegAndCorrespTime();
 		costTrainerModel.randomizeSegmentsAndPrepData();
-//		costTrainerModel.getTrainingData();
 
 		//mark a few good or bad
 		List< ValuePair< LabelingSegment, Integer > > segms = costTrainerModel.getAllSegsWithTime();
@@ -204,8 +195,7 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		costTrainerModel.modifyPredictionSet();
 
 		//compute solution
-//		costTrainerModel.bdvRemoveAll();
-//		costTrainerModel.bdvAdd( model.getRawData(), "RAW" );
+
 		try {
 			costTrainerModel.startTrainingPhase();
 		} catch ( Exception e ) {

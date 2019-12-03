@@ -3,6 +3,7 @@
  */
 package com.indago.metaseg.ui.model;
 
+import org.scijava.Context;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 import com.indago.io.DoubleTypeImgLoader;
@@ -38,6 +39,7 @@ public class MetaSegModel implements AutoCloseable {
 	private boolean is2D;
 	private final long numChannels;
 	private final long numFrames;
+	public Context scijavaContext;
 
 
 	@SuppressWarnings( "unchecked" )
@@ -174,6 +176,14 @@ public class MetaSegModel implements AutoCloseable {
 	
 	public boolean is2D() {
 		return is2D;
+	}
+
+	public void setContext( Context context ) {
+		scijavaContext = context;
+	}
+
+	public Context getContext() {
+		return scijavaContext;
 	}
 
 }
