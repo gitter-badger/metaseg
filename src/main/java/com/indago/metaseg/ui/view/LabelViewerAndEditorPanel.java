@@ -9,6 +9,7 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import net.imagej.patcher.LegacyInjector;
 import org.scijava.Context;
 import org.scijava.app.StatusService;
 import org.scijava.io.IOService;
@@ -74,6 +75,10 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 	private JButton btnContinueMetatrain;
 	private JButton btnExportSegCompatibleImages;
 	private JButton btnExportLabelFusionProblem;
+
+	static {
+		LegacyInjector.preinit();
+	}
 
 	public LabelViewerAndEditorPanel( MetaSegSolverModel solutionModel ) {
 		this.model = solutionModel;
