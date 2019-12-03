@@ -14,20 +14,22 @@ import hr.irb.fastRandomForest.FastRandomForest;
 import net.imagej.mesh.Mesh;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
+import net.imagej.ops.geom.geom2d.DefaultBoundarySizeConvexHullPolygon;
 import net.imagej.ops.geom.geom2d.DefaultBoxivityPolygon;
 import net.imagej.ops.geom.geom2d.DefaultCircularity;
 import net.imagej.ops.geom.geom2d.DefaultContour;
 import net.imagej.ops.geom.geom2d.DefaultConvexityPolygon;
-import net.imagej.ops.geom.geom2d.DefaultEccentricity;
+import net.imagej.ops.geom.geom2d.DefaultElongation;
 import net.imagej.ops.geom.geom2d.DefaultPerimeterLength;
 import net.imagej.ops.geom.geom2d.DefaultSizePolygon;
 import net.imagej.ops.geom.geom2d.DefaultSolidityPolygon;
 import net.imagej.ops.geom.geom3d.DefaultBoxivityMesh;
-import net.imagej.ops.geom.geom3d.DefaultCompactness;
 import net.imagej.ops.geom.geom3d.DefaultConvexityMesh;
+import net.imagej.ops.geom.geom3d.DefaultMainElongation;
 import net.imagej.ops.geom.geom3d.DefaultSolidityMesh;
 import net.imagej.ops.geom.geom3d.DefaultSphericity;
 import net.imagej.ops.geom.geom3d.DefaultSurfaceArea;
+import net.imagej.ops.geom.geom3d.DefaultSurfaceAreaConvexHullMesh;
 import net.imagej.ops.geom.geom3d.DefaultVolumeMesh;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
@@ -51,6 +53,12 @@ public class MetaSegRandomForestClassifier {
 	private DefaultCircularity polygonCircularityOp;
 	private DefaultSphericity meshCircularityOp;
 	private DefaultContour buildPolygoneOp;
+	private DefaultBoxivityPolygon polygonBoxivityOp;
+	private DefaultBoxivityMesh meshBoxivityOp;
+	private DefaultBoundarySizeConvexHullPolygon polygonBoundarySizeConvexHullOp;
+	private DefaultSurfaceAreaConvexHullMesh meshBoundarySizeConvexHullOp;
+	private DefaultElongation polygonElongationOp;
+	private DefaultMainElongation meshElongationOp;
 
 	public MetaSegRandomForestClassifier( boolean is2D ) {
 		this.is2D = is2D;
@@ -62,25 +70,23 @@ public class MetaSegRandomForestClassifier {
 		buildPolygoneOp = ops.op( DefaultContour.class, image2d, true );
 		Polygon2D poly = buildPolygoneOp.calculate( image2d );
 		Mesh mesh = ops.geom().marchingCubes( ArrayImgs.booleans( new boolean[] { true }, 1, 1, 1 ) );
-		polygonSolidityOp = ops.op( DefaultSolidityPolygon.class, poly ); // Area/ConvexArea, signify an object having an irregular boundary, or containing holes
-		meshSolidityOp = ops.op( DefaultSolidityMesh.class, mesh ); // Volume/convex volume
-		polygonConvexityOp = ops.op( DefaultConvexityPolygon.class, poly ); //Ratio of perimeters of convex hull over original contour 
-		meshConvexityOp = ops.op( DefaultConvexityMesh.class, mesh );
+
 		polygonAreaOp = ops.op( DefaultSizePolygon.class, poly ); //Area of polygon
 		meshAreaOp = ops.op( DefaultVolumeMesh.class, mesh ); //Volume 
 		polygonPerimeterOp = ops.op( DefaultPerimeterLength.class, poly );
 		meshPerimeterOp = ops.op( DefaultSurfaceArea.class, mesh );
+		polygonConvexityOp = ops.op( DefaultConvexityPolygon.class, poly ); //Ratio of perimeters of convex hull over original contour 
+		meshConvexityOp = ops.op( DefaultConvexityMesh.class, mesh );
 		polygonCircularityOp = ops.op( DefaultCircularity.class, poly ); // 4pi(area/perimeter^2)
 		meshCircularityOp = ops.op( DefaultSphericity.class, mesh ); // https://en.wikipedia.org/wiki/Sphericity
-		ops.op( DefaultCompactness.class, poly ); // 4*pi*area/(perimeter^2)
-		ops.op( DefaultCompactness.class, mesh ); // area^3/volume^2
-		ops.op( DefaultEccentricity.class, poly ); // ratio of length of short (minor) axis to length of long (major) axis of an object
-		ops.op( DefaultEccentricity.class, mesh );
-		ops.op( DefaultBoxivityPolygon.class, poly ); //represents how rectangular shape s is, i.e, A_s/A_r, A_r is area of min. bounding rectangle
-		ops.op( DefaultBoxivityMesh.class, mesh );
-		//Also check BoundarySizeConvexHullPolygon, DefaultElongation, Roundness, major axis,minor axis
-		//Look at more features from http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
-		//https://github.com/imagej/imagej-ops/tree/master/src/main/java/net/imagej/ops/geom/geom2d
+		polygonSolidityOp = ops.op( DefaultSolidityPolygon.class, poly ); // Area/ConvexArea, signify an object having an irregular boundary, or containing holes
+		meshSolidityOp = ops.op( DefaultSolidityMesh.class, mesh ); // Volume/convex volume
+		polygonBoxivityOp = ops.op( DefaultBoxivityPolygon.class, poly ); //represents how rectangular shape s is, i.e, A_s/A_r, A_r is area of min. bounding rectangle
+		meshBoxivityOp = ops.op( DefaultBoxivityMesh.class, mesh );
+		polygonBoundarySizeConvexHullOp = ops.op( DefaultBoundarySizeConvexHullPolygon.class, poly ); //computes the perimeter of convex hull
+		meshBoundarySizeConvexHullOp = ops.op( DefaultSurfaceAreaConvexHullMesh.class, mesh ); //computes the surface area of convex hull of mesh
+		polygonElongationOp = ops.op( DefaultElongation.class, poly );
+		meshElongationOp = ops.op( DefaultMainElongation.class, mesh );
 	}
 
 	private Instances trainingData;
@@ -96,6 +102,9 @@ public class MetaSegRandomForestClassifier {
 		attInfo.add( new Attribute( "convexity" ) );
 		attInfo.add( new Attribute( "circularity" ) );
 		attInfo.add( new Attribute( "solidity" ) );
+		attInfo.add( new Attribute( "boxivity" ) );
+		attInfo.add( new Attribute( "boundarysizeconvexhull" ) );
+		attInfo.add( new Attribute( "elongation" ) );
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
 		Instances table = new Instances( "foo bar", attInfo, 1 );
 		table.setClassIndex( table.numAttributes() - 1 );
@@ -156,6 +165,10 @@ public class MetaSegRandomForestClassifier {
 		double convexity;
 		double circularity;
 		double solidity;
+		double eccentricity;
+		double boxivity;
+		double boundarysizeconvexhull;
+		double elongation;
 		if ( is2D ) {
 			Polygon2D poly = buildPolygoneOp.calculate( hypothesis.getRegion() );
 			area = polygonAreaOp.calculate( poly ).get();
@@ -163,6 +176,9 @@ public class MetaSegRandomForestClassifier {
 			convexity = polygonConvexityOp.calculate( poly ).get();
 			circularity = polygonCircularityOp.calculate( poly ).get();
 			solidity = polygonSolidityOp.calculate( poly ).get();
+			boxivity = polygonBoxivityOp.calculate( poly ).get();
+			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
+			elongation = polygonElongationOp.calculate( poly ).get();
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
 			area = meshAreaOp.calculate( mesh ).get();
@@ -170,8 +186,19 @@ public class MetaSegRandomForestClassifier {
 			convexity = meshConvexityOp.calculate( mesh ).get();
 			circularity = meshCircularityOp.calculate( mesh ).get();
 			solidity = meshSolidityOp.calculate( mesh ).get();
+			boxivity = meshBoxivityOp.calculate( mesh ).get();
+			boundarysizeconvexhull = meshBoundarySizeConvexHullOp.calculate( mesh ).get();
+			elongation = meshElongationOp.calculate( mesh ).get();
 		}
-		DenseInstance ins = new DenseInstance( weight, new double[] { area, perimeter, convexity, circularity, solidity, category } );
+		DenseInstance ins = new DenseInstance( weight, new double[] { area,
+																	  perimeter,
+																	  convexity,
+																	  circularity,
+																	  solidity,
+																	  boxivity,
+																	  boundarysizeconvexhull,
+																	  elongation,
+																	  category } );
 		return ins;
 	}
 }
