@@ -9,8 +9,10 @@ import java.util.Map;
 import org.scijava.Context;
 
 import com.indago.data.segmentation.LabelingSegment;
+import com.indago.metaseg.ui.model.MetaSegModel;
 
 import hr.irb.fastRandomForest.FastRandomForest;
+import net.imagej.ImgPlus;
 import net.imagej.mesh.Mesh;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
@@ -29,11 +31,18 @@ import net.imagej.ops.geom.geom3d.DefaultSphericity;
 import net.imagej.ops.geom.geom3d.DefaultSurfaceArea;
 import net.imagej.ops.geom.geom3d.DefaultSurfaceAreaConvexHullMesh;
 import net.imagej.ops.geom.geom3d.DefaultVolumeMesh;
+import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.roi.Regions;
+import net.imglib2.roi.boundary.Boundary;
 import net.imglib2.roi.geom.real.Polygon2D;
 import net.imglib2.type.logic.NativeBoolType;
+import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.ValuePair;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.Views;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instances;
@@ -51,15 +60,17 @@ public class MetaSegRandomForestClassifier {
 	private DefaultCircularity polygonCircularityOp;
 	private DefaultSphericity meshCircularityOp;
 	private DefaultContour buildPolygoneOp;
-//	private DefaultBoxivityPolygon polygonBoxivityOp;
-//	private DefaultBoxivityMesh meshBoxivityOp;
 	private DefaultBoundarySizeConvexHullPolygon polygonBoundarySizeConvexHullOp;
 	private DefaultSurfaceAreaConvexHullMesh meshBoundarySizeConvexHullOp;
 	private DefaultElongation polygonElongationOp;
 	private DefaultMainElongation meshElongationOp;
+	private final MetaSegModel model;
+	private ImgPlus< DoubleType > img;
 
-	public MetaSegRandomForestClassifier( boolean is2D ) {
+	public MetaSegRandomForestClassifier( boolean is2D, MetaSegModel model ) {
 		this.is2D = is2D;
+		this.model = model;
+		img = model.getRawData();
 		prematchOps();
 	}
 
@@ -100,6 +111,8 @@ public class MetaSegRandomForestClassifier {
 		attInfo.add( new Attribute( "solidity" ) );
 		attInfo.add( new Attribute( "boundarysizeconvexhull" ) );
 		attInfo.add( new Attribute( "elongation" ) );
+		attInfo.add( new Attribute( "boundarypixelsum" ) );
+		attInfo.add( new Attribute( "facepixelsum" ) );
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
 		Instances table = new Instances( "foo bar", attInfo, 1 );
 		table.setClassIndex( table.numAttributes() - 1 );
@@ -107,7 +120,9 @@ public class MetaSegRandomForestClassifier {
 	}
 
 
-	public void initializeTrainingData( List< LabelingSegment > goodHypotheses, List< LabelingSegment > badHypotheses ) {
+	public void initializeTrainingData(
+			List< ValuePair< LabelingSegment, Integer > > goodHypotheses,
+			List< ValuePair< LabelingSegment, Integer > > badHypotheses ) {
 		trainingData = newTable();
 		double relative_weight_bad = ( double ) goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
 //		double relative_weight_bad = 1;
@@ -132,18 +147,18 @@ public class MetaSegRandomForestClassifier {
 		forest.buildClassifier( trainingData );
 	}
 
-	public Map< LabelingSegment, Double > predict( List< LabelingSegment > predictionSet ) {
+	public Map< LabelingSegment, Double > predict( List< ValuePair< LabelingSegment, Integer > > predictionSet ) {
 		Map< LabelingSegment, Double > costs = new HashMap<>();
 		Instances testData = newTable();
-		for ( final LabelingSegment segment : predictionSet ) {
+		for ( final ValuePair< LabelingSegment, Integer > segment : predictionSet ) {
 			DenseInstance ins = extractFeaturesFromHypotheses( segment, 1, 0 );
 			ins.setDataset( testData );
 			try {
 				double prob = forest.distributionForInstance( ins )[ 1 ]; // probability of class 1 ("good" class)
 				if ( prob < 0.5 ) {
-					costs.put( segment, prob );
+					costs.put( segment.getA(), prob );
 				} else {
-					costs.put( segment, -prob );
+					costs.put( segment.getA(), -prob );
 				}
 
 			} catch ( Exception e ) {
@@ -154,7 +169,7 @@ public class MetaSegRandomForestClassifier {
 		return costs;
 	}
 
-	private DenseInstance extractFeaturesFromHypotheses( LabelingSegment hypothesis, double weight, int category ) {
+	private DenseInstance extractFeaturesFromHypotheses( ValuePair< LabelingSegment, Integer > valuePair, double weight, int category ) {
 		double area;
 		double perimeter;
 		double convexity;
@@ -162,6 +177,10 @@ public class MetaSegRandomForestClassifier {
 		double solidity;
 		double boundarysizeconvexhull;
 		double elongation;
+		double boundaryPixelSum;
+		double pixelSumNormalized;
+		LabelingSegment hypothesis = valuePair.getA();
+		Integer time = valuePair.getB();
 		if ( is2D ) {
 			Polygon2D poly = buildPolygoneOp.calculate( hypothesis.getRegion() );
 			area = polygonAreaOp.calculate( poly ).get();
@@ -171,6 +190,8 @@ public class MetaSegRandomForestClassifier {
 			solidity = polygonSolidityOp.calculate( poly ).get();
 			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
 			elongation = polygonElongationOp.calculate( poly ).get();
+			boundaryPixelSum = computeBoundaryPixelSum( hypothesis, time );
+			pixelSumNormalized = computeFacePixelSum( hypothesis, time ) / area;
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
 			area = meshAreaOp.calculate( mesh ).get();
@@ -180,6 +201,8 @@ public class MetaSegRandomForestClassifier {
 			solidity = meshSolidityOp.calculate( mesh ).get();
 			boundarysizeconvexhull = meshBoundarySizeConvexHullOp.calculate( mesh ).get();
 			elongation = meshElongationOp.calculate( mesh ).get();
+			boundaryPixelSum = computeBoundaryPixelSum( hypothesis, time );
+			pixelSumNormalized = computeFacePixelSum( hypothesis, time ) / area;
 		}
 		DenseInstance ins = new DenseInstance( weight, new double[] { area,
 																	  perimeter,
@@ -188,7 +211,38 @@ public class MetaSegRandomForestClassifier {
 																	  solidity,
 																	  boundarysizeconvexhull,
 																	  elongation,
+																	  boundaryPixelSum,
+																	  pixelSumNormalized,
 																	  category } );
 		return ins;
+	}
+
+
+	private double computeFacePixelSum( LabelingSegment hypothesis, Integer time ) {
+		double sum = 0d;
+		IntervalView< DoubleType > retSlice = Views.hyperSlice(
+				img,
+				model.getTimeDimensionIndex(),
+				time );
+		Cursor< DoubleType > cursor = Regions.sample( hypothesis.getRegion(), retSlice ).cursor();
+		while ( cursor.hasNext() ) {
+			sum = sum + cursor.next().get();
+		}
+		return sum;
+	}
+
+	private double computeBoundaryPixelSum( LabelingSegment hypothesis, Integer time ) {
+		Boundary maskBoundary = new Boundary<>( hypothesis.getRegion() );
+		IntervalView< DoubleType > retSlice = Views.hyperSlice(
+				img,
+				model.getTimeDimensionIndex(),
+				time );
+		double sum = 0d;
+		Cursor< DoubleType > cursor = Regions.sample( maskBoundary, retSlice ).cursor();
+		while ( cursor.hasNext() ) {
+			sum = sum + cursor.next().get();
+		}
+
+		return sum;
 	}
 }

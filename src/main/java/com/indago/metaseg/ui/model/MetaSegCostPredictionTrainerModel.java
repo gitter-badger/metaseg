@@ -501,16 +501,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void extractFeatures() throws Exception {
-		rf = new MetaSegRandomForestClassifier( parentModel.is2D() );
+		rf = new MetaSegRandomForestClassifier( parentModel.is2D(), parentModel );
 		rf.buildRandomForest();
-		ArrayList< LabelingSegment > goodSegs = new ArrayList<>();
-		ArrayList< LabelingSegment > badSegs = new ArrayList<>();
-		for ( ValuePair< LabelingSegment, Integer > vp : goodHypotheses ) {
-			goodSegs.add( vp.getA() );
-		}
-		for ( ValuePair< LabelingSegment, Integer > vp : badHypotheses ) {
-			badSegs.add( vp.getA() );
-		}
+		ArrayList< ValuePair< LabelingSegment, Integer > > goodSegs = new ArrayList<>();
+		ArrayList< ValuePair< LabelingSegment, Integer > > badSegs = new ArrayList<>();
+		goodSegs.addAll( goodHypotheses );
+		badSegs.addAll( badHypotheses );
+//		for ( ValuePair< LabelingSegment, Integer > vp : goodHypotheses ) {
+//			goodSegs.add( vp.getA() );
+//		}
+//		for ( ValuePair< LabelingSegment, Integer > vp : badHypotheses ) {
+//			badSegs.add( vp.getA() );
+//		}
 		rf.initializeTrainingData( goodSegs, badSegs );
 		trainForest( rf );
 	}
@@ -520,9 +522,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public Map< LabelingSegment, Double > computeAllCosts() {
-		ArrayList< LabelingSegment > predSetThisIter = new ArrayList<>();
+		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = new ArrayList<>();
 		for ( ValuePair< LabelingSegment, Integer > valuePair : predictionSet ) {
-			predSetThisIter.add( valuePair.getA() );
+			predSetThisIter.add( valuePair );
 		}
 		costs = rf.predict( predSetThisIter );
 		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
@@ -537,8 +539,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public Map< LabelingSegment, Double > computeIntermediateCosts( ValuePair< LabelingSegment, Integer > hypothesis ) {
-		ArrayList< LabelingSegment > tempList = new ArrayList<>();
-		tempList.add( hypothesis.getA() );
+		ArrayList< ValuePair< LabelingSegment, Integer > > tempList = new ArrayList<>();
+		tempList.add( hypothesis );
 		Map< LabelingSegment, Double > localCosts = rf.predict( tempList );
 		int trainsetsize = goodHypotheses.size() + badHypotheses.size();
 		System.out.println( "Training set size:" + trainsetsize );
