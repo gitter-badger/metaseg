@@ -40,6 +40,7 @@ import com.indago.ui.util.UniversalFileChooser;
 import com.indago.util.OSValidator;
 
 import ij.IJ;
+import ij.ImageJ;
 import ij.ImagePlus;
 import io.scif.codec.CodecService;
 import io.scif.formats.qt.QTJavaService;
@@ -99,10 +100,10 @@ public class MetaSegApplication {
 	public MetaSegApplication() {
 		isStandalone = true;
 
-//		final ImageJ temp = IJ.getInstance();
-//		if ( temp == null ) {
-//			new ImageJ();
-//		}
+		final ImageJ temp = IJ.getInstance();
+		if ( temp == null ) {
+			new ImageJ();
+		}
 
 		context =
 				new Context( FormatService.class, OpService.class, OpMatchingService.class,
