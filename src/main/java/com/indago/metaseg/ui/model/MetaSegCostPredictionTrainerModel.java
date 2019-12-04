@@ -97,6 +97,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private ProjectFolder hypothesesFolder;
 	private final List< ProgressListener > progressListeners = new ArrayList<>();
 	private boolean savedCostsLoaded;
+	private AffineTransform3D transform;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -391,10 +392,12 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		paintSegmentToDisplayDuringManualClassification( c, hypothesisImage, segment, time );
 		bdvHandlePanel.getViewerPanel().setTimepoint( time );
 		setZSlice( segment ); //only for 3d
+		centerSegmentToViewerScreen(segment);
 		int displayColor = chooseColorForDisplay();
 		bdvAdd( hypothesisImage, "Classifying", 0, maxVal, new ARGBType( displayColor ), true );
 		chooseGoodBadAndModifyTrainPredUndoSets( segment );
 	}
+
 
 	private int chooseColorForDisplay() {
 		int displayColor;
@@ -443,8 +446,8 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	private void setZSlice( LabelingSegment segment ) {
+		transform = new AffineTransform3D();
 		if ( parentModel.is2D() == false ) { //only for 3d
-			final AffineTransform3D transform = new AffineTransform3D();
 			bdvHandlePanel.getViewerPanel().getState().getViewerTransform( transform );
 			RealLocalizable source = segment.getCenterOfMass();
 			RealPoint target = new RealPoint( 3 );
@@ -452,6 +455,25 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			transform.translate( 0, 0, -target.getDoublePosition( 2 ) );
 			bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
 		}
+	}
+
+	private void centerSegmentToViewerScreen( LabelingSegment segment ) { //TODO Need to check how good it works with 3D since the transform is being used twice
+		bdvHandlePanel.getViewerPanel().getState().getViewerTransform( transform );
+		RealLocalizable source = segment.getCenterOfMass();
+		RealPoint target = new RealPoint( 3 );
+		if(parentModel.is2D()) {
+			target.setPosition( 0, 2 ); //Set position in 2nd dimension to 0; bdv takes 0 as slice for 2D/2D+t images
+			target.setPosition( source.getDoublePosition( 1 ), 1 );
+			target.setPosition( source.getDoublePosition( 0 ), 0 );
+		}else {
+			transform.apply( source, target );
+		}
+		
+		transform.translate(
+				-target.getDoublePosition( 0 ) + 0.5 * bdvHandlePanel.getViewerPanel().getWidth(),
+				-target.getDoublePosition( 1 ) + 0.5 * bdvHandlePanel.getViewerPanel().getHeight(),
+				-target.getDoublePosition( 2 ) );
+		bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
 	}
 
 	private ValuePair< LabelingSegment, Integer > pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) { //safeguard against size of pred set = 0 needs checking
