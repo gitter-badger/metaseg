@@ -292,7 +292,6 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	}
 
 	private void processSegmentationInputs() {
-//		parseAndSetParametersInModel();
 		model.createLabelingsFromScratch();
 		model.getConflictGraphs();
 		model.getConflictCliques();

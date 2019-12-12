@@ -59,6 +59,7 @@ import net.imagej.DatasetService;
 import net.imagej.ImgPlus;
 import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
+import net.imagej.patcher.LegacyInjector;
 import net.imglib2.img.VirtualStackAdapter;
 import weka.gui.ExtensionFileFilter;
 
@@ -85,18 +86,27 @@ public class MetaSegApplication {
 
 	private final Logger log;
 
+	private Context context;
+
+	static {
+		LegacyInjector.preinit();
+	}
+
+
 	public static void main( final String[] args ) {
 		new MetaSegApplication().run(args);
 	}
 
 	public MetaSegApplication() {
 		isStandalone = true;
+
 		final ImageJ temp = IJ.getInstance();
 		if ( temp == null ) {
 			new ImageJ();
 		}
 
-		final Context context = new Context( FormatService.class, OpService.class, OpMatchingService.class,
+		context =
+				new Context( FormatService.class, OpService.class, OpMatchingService.class,
 				IOService.class, DatasetIOService.class, LocationService.class, DatasetService.class,
 				ImgUtilityService.class, StatusService.class, TranslatorService.class, QTJavaService.class,
 				TiffService.class, CodecService.class, JAIIIOService.class, LogService.class,
@@ -144,6 +154,7 @@ public class MetaSegApplication {
 
 		if ( imgPlus != null ) {
 			final MetaSegModel model = new MetaSegModel( projectFolder, imgPlus );
+			model.setContext( context );
 			mainPanel = new MetaSegMainPanel( guiFrame, model );
 
 			guiFrame.getContentPane().add( mainPanel );
@@ -505,6 +516,10 @@ public class MetaSegApplication {
 			e.printStackTrace();
 			showErrorAndExit(8, "Project folder (%s) could not be initialized.", projectFolderBasePath.getAbsolutePath() );
 		}
+	}
+
+	public Context getContext() {
+		return context;
 	}
 
 }

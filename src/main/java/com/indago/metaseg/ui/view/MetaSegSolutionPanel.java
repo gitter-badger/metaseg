@@ -69,19 +69,6 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
 
-//		if ( model.getModel().is2D() ) {
-//			model.bdvSetHandlePanel(
-//					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-//							.options()
-//							.is2D() ) );
-//		} else {
-//			model.bdvSetHandlePanel(
-//					new BdvHandlePanel( ( Frame ) this.getTopLevelAncestor(), Bdv
-//							.options() ) );
-//		} //This gives 2D/3D bdv panel for solution
-//		viewer.add( model.bdvGetHandlePanel().getViewerPanel(), BorderLayout.CENTER );
-//		model.populateBdv();
-
 		tabSolutionAndLevEditing = new LabelViewerAndEditorPanel( model );
 		viewer.add( tabSolutionAndLevEditing, BorderLayout.CENTER );
 
