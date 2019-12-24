@@ -83,6 +83,7 @@
 		<dependency>
             <groupId>com.indago</groupId>
             <artifactId>Indago</artifactId>
+            <version>0.1.12-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.gurobi</groupId>
