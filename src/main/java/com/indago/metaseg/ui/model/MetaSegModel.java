@@ -39,7 +39,7 @@ public class MetaSegModel implements AutoCloseable {
 	private boolean is2D;
 	private final long numChannels;
 	private final long numFrames;
-	public Context scijavaContext;
+	private Context scijavaContext;
 
 
 	@SuppressWarnings( "unchecked" )
