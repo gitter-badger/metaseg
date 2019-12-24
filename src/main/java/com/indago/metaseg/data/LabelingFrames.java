@@ -68,8 +68,6 @@ public class LabelingFrames {
 		try {
 			final List< RandomAccessibleInterval< IntType > > segmentHypothesesImages = getSegmentHypothesesImages();
 			if ( segmentHypothesesImages.size() == 0 ) { return false; }
-			final RandomAccessibleInterval< IntType > firstSumImg = segmentHypothesesImages
-					.get( 0 );
 
 			frameLabelingBuilders = new ArrayList<>();
 
