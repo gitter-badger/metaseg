@@ -23,8 +23,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.scijava.Context;
-
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.pg.MetaSegProblem;
 import com.indago.metaseg.ui.model.MetaSegSolverModel;
@@ -34,7 +32,6 @@ import com.indago.pg.segments.SegmentNode;
 import com.indago.ui.util.UniversalFileChooser;
 
 import bdv.util.BdvSource;
-import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.miginfocom.swing.MigLayout;
 
@@ -50,8 +47,9 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	private JButton btnExportSegCompatibleImages;
 	private JButton btnExportLabelFusionProblem;
 	
-	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
-
+	private OpService ops() {
+		return model.getContext().service( OpService.class );
+	}
 	private LabelViewerAndEditorPanel< ? > tabSolutionAndLevEditing;
 
 	private JButton btnExportSegSourceStats;
