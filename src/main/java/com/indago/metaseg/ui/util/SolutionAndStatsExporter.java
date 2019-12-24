@@ -2,6 +2,9 @@ package com.indago.metaseg.ui.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import com.indago.fg.Assignment;
 import com.indago.io.DataMover;
@@ -19,7 +22,7 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-public class SolutionExporter {
+public class SolutionAndStatsExporter {
 	
 	public static void exportSegData( final MetaSegSolverModel msSolverModel, File projectFolderBasePath ) {
 		try {
@@ -44,28 +47,21 @@ public class SolutionExporter {
 		final RandomAccessibleInterval< IntType > ret =
 				DataMover.createEmptyArrayImgLike( msSolverModel.getRawData(), new IntType() );
 		//call collectTraData
-		if ( msSolverModel.getModel().hasFrames() ) {
-			for ( int t = 0; t < msSolverModel.getModel().getNumberOfFrames(); t++ ) {
-				final Assignment< IndicatorNode > solution = msSolverModel.getPgSolution( t );
-				if ( solution != null ) {
-					final IntervalView< IntType > retSlice = Views.hyperSlice( ret, msSolverModel.getModel().getTimeDimensionIndex(), t );
-
-					int curColorId = 1;
-					for ( final SegmentNode segVar : msSolverModel.getProblems().get( t ).getSegments() ) {
-						if ( solution.getAssignment( segVar ) == 1 ) {
-							drawSegmentWithId( retSlice, solution, segVar, curColorId );
-							curColorId = curColorId + 1;
-						}
-					}
-				}
-			}
-		} else {
-			final Assignment< IndicatorNode > solution = msSolverModel.getPgSolution( 0 );
+		long timePoints = msSolverModel.getModel().getNumberOfFrames();
+		for ( int t = 0; t < timePoints; t++ ) {
+			final Assignment< IndicatorNode > solution = msSolverModel.getPgSolution( t );
+			final IntervalView< IntType > retSlice;
 			if ( solution != null ) {
-				final int curColorId = 1;
-				for ( final SegmentNode segVar : msSolverModel.getProblems().get( 0 ).getSegments() ) {
+				if ( timePoints > 1 ) {
+					retSlice = Views.hyperSlice( ret, msSolverModel.getModel().getTimeDimensionIndex(), t );
+				} else {
+					retSlice = ( IntervalView< IntType > ) ret;
+				}
+				int curColorId = 1;
+				for ( final SegmentNode segVar : msSolverModel.getProblems().get( t ).getSegments() ) {
 					if ( solution.getAssignment( segVar ) == 1 ) {
-						drawSegmentWithId( ret, solution, segVar, curColorId );
+						drawSegmentWithId( retSlice, solution, segVar, curColorId );
+						curColorId = curColorId + 1;
 					}
 				}
 			}
@@ -92,4 +88,25 @@ public class SolutionExporter {
 			}
 		}
 	}
+
+	public static List< Map< String, Integer > > exportSegSourcesStats( MetaSegSolverModel msSolverModel, File projectFolderBasePath ) {
+		List< String > segSourcesPerTime = null;
+		List<Map<String, Integer>> segSources = new ArrayList<>();
+		long timePoints = msSolverModel.getModel().getNumberOfFrames();
+		for ( int t = 0; t < timePoints; t++ ) {
+				segSourcesPerTime = new ArrayList<>();
+				final Assignment< IndicatorNode > solution = msSolverModel.getPgSolution( t );
+				if ( solution != null ) {
+					for ( final SegmentNode segVar : msSolverModel.getProblems().get( t ).getSegments() ) {
+						if ( solution.getAssignment( segVar ) == 1 ) {
+							segSourcesPerTime.add( segVar.getSegment().getSegmentationSource());
+						}
+					}
+				}
+				Map< String, Integer > frequencies = Utils.returnFrequencies( segSourcesPerTime );
+				segSources.add( frequencies );
+			}
+		return segSources;
+	}
+
 }
