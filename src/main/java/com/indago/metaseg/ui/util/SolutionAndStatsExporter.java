@@ -26,13 +26,19 @@ public class SolutionAndStatsExporter {
 	
 	public static void exportSegData( final MetaSegSolverModel msSolverModel, File projectFolderBasePath ) {
 		try {
-			RandomAccessibleInterval< IntType > segImages = createSegData( msSolverModel );
-			for ( int image = 0; image < msSolverModel.getModel().getNumberOfFrames(); image++ ) {
-				IntervalView< IntType > res = Views.hyperSlice( segImages, msSolverModel.getModel().getTimeDimensionIndex(), image );
+			RandomAccessibleInterval< IntType > segImages = createSegData( msSolverModel ); //TODO instance labels compatible to SEG format works only for 2D images, need to fix it
+			if ( msSolverModel.getModel().getNumberOfFrames() > 1 ) {
+				for ( int image = 0; image < msSolverModel.getModel().getNumberOfFrames(); image++ ) {
+					IntervalView< IntType > res = Views.hyperSlice( segImages, msSolverModel.getModel().getTimeDimensionIndex(), image );
+					IJ.save(
+							ImageJFunctions.wrap( res, "label fusion solution" ).duplicate(),
+							projectFolderBasePath.getAbsolutePath() + "/mask" + String
+									.format( "%03d", image ) + ".tif" );
+				}
+			} else {
 				IJ.save(
-						ImageJFunctions.wrap( res, "tracking solution" ).duplicate(),
-						projectFolderBasePath.getAbsolutePath() + "/mask" + String
-								.format( "%03d", image ) + ".tif" );
+						ImageJFunctions.wrap( segImages, "label fusion solution" ).duplicate(),
+						projectFolderBasePath.getAbsolutePath() + "/mask" + String.format( "%03d", 0 ) + ".tif" );
 			}
 
 		} catch ( IOException e ) {
@@ -50,12 +56,12 @@ public class SolutionAndStatsExporter {
 		long timePoints = msSolverModel.getModel().getNumberOfFrames();
 		for ( int t = 0; t < timePoints; t++ ) {
 			final Assignment< IndicatorNode > solution = msSolverModel.getPgSolution( t );
-			final IntervalView< IntType > retSlice;
+			final RandomAccessibleInterval< IntType > retSlice;
 			if ( solution != null ) {
 				if ( timePoints > 1 ) {
 					retSlice = Views.hyperSlice( ret, msSolverModel.getModel().getTimeDimensionIndex(), t );
 				} else {
-					retSlice = ( IntervalView< IntType > ) ret;
+					retSlice = ret;
 				}
 				int curColorId = 1;
 				for ( final SegmentNode segVar : msSolverModel.getProblems().get( t ).getSegments() ) {
