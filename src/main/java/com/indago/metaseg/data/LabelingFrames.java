@@ -78,8 +78,9 @@ public class LabelingFrames {
 				final RandomAccessibleInterval< DoubleType > rawFrame = model.getModel().getFrame( frameId );
 				final LabelingBuilder labelingBuilder = new LabelingBuilder( rawFrame );
 				frameLabelingBuilders.add( labelingBuilder );
-
+				int segCounter = 0;
 				for ( final RandomAccessibleInterval< IntType > sumimg : segmentHypothesesImages ) {
+					String segmentationSource = Integer.toString( segCounter );
 					// hyperslize sum_img to desired frame
 					final long[] offset = new long[ sumimg.numDimensions() ];
 					final IntervalView< IntType > sumImgFrame;
@@ -101,7 +102,9 @@ public class LabelingFrames {
 									maxHypothesisSize,
 									maxGrowthPerStep,
 									darkToBright );
-					labelingBuilder.buildLabelingForest( tree );
+
+					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+					segCounter += 1;
 				}
 			}
 
