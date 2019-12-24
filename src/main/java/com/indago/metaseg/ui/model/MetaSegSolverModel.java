@@ -6,6 +6,8 @@ package com.indago.metaseg.ui.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.scijava.Context;
+
 import com.indago.fg.Assignment;
 import com.indago.fg.AssignmentMapper;
 import com.indago.fg.FactorGraphFactory;
@@ -60,6 +62,10 @@ public class MetaSegSolverModel implements BdvWithOverlaysOwner {
 	public MetaSegSolverModel( final MetaSegModel metaSegModel ) {
 		this.model = metaSegModel;
 		this.costModel = metaSegModel.getCostTrainerModel();
+	}
+
+	public Context getContext() {
+		return model.getContext();
 	}
 
 	public void run() {
