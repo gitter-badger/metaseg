@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.scijava.Context;
+import org.scijava.plugin.Parameter;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.ui.model.MetaSegModel;
@@ -14,7 +14,6 @@ import com.indago.metaseg.ui.model.MetaSegModel;
 import hr.irb.fastRandomForest.FastRandomForest;
 import net.imagej.ImgPlus;
 import net.imagej.mesh.Mesh;
-import net.imagej.ops.OpMatchingService;
 import net.imagej.ops.OpService;
 import net.imagej.ops.geom.geom2d.DefaultBoundarySizeConvexHullPolygon;
 import net.imagej.ops.geom.geom2d.DefaultCircularity;
@@ -71,6 +70,7 @@ public class MetaSegRandomForestClassifier {
 		this.is2D = is2D;
 		this.model = model;
 		img = model.getRawData();
+		model.getContext().inject( this );
 		prematchOps();
 	}
 
@@ -99,7 +99,9 @@ public class MetaSegRandomForestClassifier {
 	private Instances trainingData;
 	private FastRandomForest forest;
 	
-	OpService ops = new Context( OpService.class, OpMatchingService.class ).getService( OpService.class );
+	@Parameter
+	private OpService ops;
+
 	private final boolean is2D;
 
 	private static Instances newTable() {
@@ -220,10 +222,7 @@ public class MetaSegRandomForestClassifier {
 
 	private double computeFacePixelSum( LabelingSegment hypothesis, Integer time ) {
 		double sum = 0d;
-		IntervalView< DoubleType > retSlice = Views.hyperSlice(
-				img,
-				model.getTimeDimensionIndex(),
-				time );
+		IntervalView< DoubleType > retSlice = extractSliceAtTime( time );
 		Cursor< DoubleType > cursor = Regions.sample( hypothesis.getRegion(), retSlice ).cursor();
 		while ( cursor.hasNext() ) {
 			sum = sum + cursor.next().get();
@@ -233,10 +232,7 @@ public class MetaSegRandomForestClassifier {
 
 	private double computeBoundaryPixelSum( LabelingSegment hypothesis, Integer time ) {
 		Boundary maskBoundary = new Boundary<>( hypothesis.getRegion() );
-		IntervalView< DoubleType > retSlice = Views.hyperSlice(
-				img,
-				model.getTimeDimensionIndex(),
-				time );
+		IntervalView< DoubleType > retSlice = extractSliceAtTime( time );
 		double sum = 0d;
 		Cursor< DoubleType > cursor = Regions.sample( maskBoundary, retSlice ).cursor();
 		while ( cursor.hasNext() ) {
@@ -244,5 +240,24 @@ public class MetaSegRandomForestClassifier {
 		}
 
 		return sum;
+	}
+
+	private IntervalView< DoubleType > extractSliceAtTime( Integer time ) {
+		IntervalView< DoubleType > retSlice;
+		if ( model.getNumberOfFrames() > 1 ) {
+			retSlice = Views.hyperSlice(
+					img,
+					model.getTimeDimensionIndex(),
+					time );
+		} else {
+			long[] mininterval = new long[ img.numDimensions() ];
+			long[] maxinterval = new long[ img.numDimensions() ];
+			for ( int i = 0; i < mininterval.length - 1; i++ ) {
+				mininterval[ i ] = img.min( i );
+				maxinterval[ i ] = img.max( i );
+			}
+			retSlice = Views.interval( img, mininterval, maxinterval );
+		}
+		return retSlice;
 	}
 }
