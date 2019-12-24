@@ -79,4 +79,14 @@ public class Utils {
 		return mapId2Costs;
 	}
 
+	public static Map< String, Integer > returnFrequencies( List< String > segSourcesPerTime ) {
+		Map< String, Integer > hm = new HashMap< String, Integer >();
+
+		for ( String i : segSourcesPerTime ) {
+			Integer j = hm.get( i );
+			hm.put( i, ( j == null ) ? 1 : j + 1 );
+		}
+		return hm;
+	}
+
 }
