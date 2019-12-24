@@ -68,7 +68,6 @@ public class LabelingFrames {
 		try {
 			final List< RandomAccessibleInterval< IntType > > segmentHypothesesImages = getSegmentHypothesesImages();
 			if ( segmentHypothesesImages.size() == 0 ) { return false; }
-
 			frameLabelingBuilders = new ArrayList<>();
 
 			for ( int frameId = 0; frameId < model.getModel().getNumberOfFrames(); frameId++ ) {
@@ -162,7 +161,6 @@ public class LabelingFrames {
 					frameLabelingBuilders.add( new LabelingBuilder( labelingPlus ) );
 				} catch ( final IOException e ) {
 					MetaSegLog.segmenterLog.error( String.format( "Labeling could not be loaded! (%s)", fLabeling.toString() ) );
-//					e.printStackTrace();
 				}
 			}
 			processedOrLoaded = true;
