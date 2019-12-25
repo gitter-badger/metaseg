@@ -9,12 +9,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSplitPane;
@@ -25,6 +28,7 @@ import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
+import indago.ui.progress.ProgressListener;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -45,6 +49,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JCheckBox boxContinuousRetrain;
 	private JTextField txtMaxPixelComponentSize;
 	private JTextField txtMinPixelComponentSize;
+	private final List< ProgressListener > progressListeners = new ArrayList<>();
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -74,7 +79,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelFetch.setBorder( BorderFactory.createTitledBorder( "segmentation fetching" ) );
 
 		txtMaxPixelComponentSize = new JTextField( 5 );
-		txtMaxPixelComponentSize.setText( Integer.toString( model.getMaxPixelComponentSize() ) ); //TODO Needs changing later to image size -1
+		txtMaxPixelComponentSize.setText( Integer.toString( model.getMaxPixelComponentSize() ) );
 		txtMaxPixelComponentSize.addActionListener( this );
 		txtMaxPixelComponentSize.addFocusListener( this );
 		txtMinPixelComponentSize = new JTextField( 5 );
@@ -183,11 +188,13 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
 			actionFetchForManualClassify();
 		} else if ( e.getSource().equals( btnComputeSoln ) ) {
+
 			try {
 				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
+
 
 		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
 			JCheckBox state = ( JCheckBox ) e.getSource();
@@ -209,30 +216,46 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		MetaSegLog.log.info( "Starting MetaSeg optimization..." );
 		model.bdvRemoveAll();
 		model.bdvAdd( model.getParentModel().getRawData(), "RAW" );
-		model.startTrainingPhase();
-		model.computeAllCosts();
+		if ( model.isSavedCostsLoaded() == false ) {
+			model.startTrainingPhase();
+			model.computeAllCosts();
+		}
 		model.getParentModel().getSolutionModel().run();
 		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
-		MetaSegLog.segmenterLog.info( "Done!" );
-		model.getParentModel().getSolutionModel().populateBdv();
+		MetaSegLog.segmenterLog.info( "Done solving!" );
+		MetaSegLog.segmenterLog.info( "Populating the solution ..." );
+		model.getParentModel().getMainPanel().getTabSolution().getLabelEditorBasedSolutionAndLevEditingTab().populateBdv( model.getParentModel().getSolutionModel() );
 	}
 
 	private void actionFetchForManualClassify() {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
+		if ( model.isCostsExists() ) {
+			int rewriteCosts = JOptionPane.showConfirmDialog(
+					null,
+					"costs already exist, continue purging it and recreate based on new training?",
+					"Rewrite costs",
+					JOptionPane.YES_NO_OPTION );
+			if ( rewriteCosts == JOptionPane.YES_OPTION ) {
+				model.clearAllCosts();
+				model.setSavedCostsLoaded( false );
+			} else {
+				model.setSavedCostsLoaded( true );
+				return;
+			}
+		} else {
+
+		}
 		model.setAllSegAndCorrespTime();
 		model.randomizeSegmentsAndPrepData();
-		model.getTrainingData();
+		model.showFirstSegmentForManualClassification();
 	}
 
 	private void actionFetch() {
 
-//		parseAndSetParametersInModel();
-		model.getLabelings();
-		model.getConflictGraphs();
-		model.getConflictCliques();
+		model.purgeSegmentationData();
+		processSegmentationInputs();
 		MetaSegLog.log.info( "Segmentation results fetched!" );
 	}
-
 
 	@Override
 	public void focusGained( FocusEvent e ) {}
@@ -266,6 +289,14 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			txtMinPixelComponentSize.setText( "" + model.getMinPixelComponentSize() );
 		}
 
+	}
+
+	private void processSegmentationInputs() {
+		model.createLabelingsFromScratch();
+		model.getConflictGraphs();
+		model.getConflictCliques();
+		model.saveLabelingFrames();
+		model.setSavedCostsLoaded( false );
 	}
 
 }

@@ -15,4 +15,10 @@
 
 # other
 *.log
+.ipynb_checkpoints*
 checkpoint.model
+*.tif
+*.xml
+*segmenter.labeling
+*.props
+*.jfr

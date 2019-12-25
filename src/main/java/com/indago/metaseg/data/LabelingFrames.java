@@ -68,9 +68,6 @@ public class LabelingFrames {
 		try {
 			final List< RandomAccessibleInterval< IntType > > segmentHypothesesImages = getSegmentHypothesesImages();
 			if ( segmentHypothesesImages.size() == 0 ) { return false; }
-			final RandomAccessibleInterval< IntType > firstSumImg = segmentHypothesesImages
-					.get( 0 );
-
 			frameLabelingBuilders = new ArrayList<>();
 
 			for ( int frameId = 0; frameId < model.getModel().getNumberOfFrames(); frameId++ ) {
@@ -78,8 +75,9 @@ public class LabelingFrames {
 				final RandomAccessibleInterval< DoubleType > rawFrame = model.getModel().getFrame( frameId );
 				final LabelingBuilder labelingBuilder = new LabelingBuilder( rawFrame );
 				frameLabelingBuilders.add( labelingBuilder );
-
+				int segCounter = 0;
 				for ( final RandomAccessibleInterval< IntType > sumimg : segmentHypothesesImages ) {
+					String segmentationSource = Integer.toString( segCounter );
 					// hyperslize sum_img to desired frame
 					final long[] offset = new long[ sumimg.numDimensions() ];
 					final IntervalView< IntType > sumImgFrame;
@@ -101,7 +99,9 @@ public class LabelingFrames {
 									maxHypothesisSize,
 									maxGrowthPerStep,
 									darkToBright );
-					labelingBuilder.buildLabelingForest( tree );
+
+					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+					segCounter += 1;
 				}
 			}
 
@@ -161,7 +161,6 @@ public class LabelingFrames {
 					frameLabelingBuilders.add( new LabelingBuilder( labelingPlus ) );
 				} catch ( final IOException e ) {
 					MetaSegLog.segmenterLog.error( String.format( "Labeling could not be loaded! (%s)", fLabeling.toString() ) );
-//					e.printStackTrace();
 				}
 			}
 			processedOrLoaded = true;

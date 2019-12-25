@@ -1,8 +1,6 @@
 import javax.swing.JOptionPane;
 
-import org.scijava.Context;
 import org.scijava.command.Command;
-import org.scijava.command.ContextCommand;
 import org.scijava.log.Logger;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -38,7 +36,7 @@ public class MetasegPlugin implements Command {
 	public void run() {
 		final boolean gurobiWorks = GurobiInstaller.install();
 
-		if(gurobiWorks) {
+		if ( gurobiWorks ) {
 			final MetaSegApplication app = new MetaSegApplication(opService, tr2dSegmentationPluginService, log);
 			try {
 				app.run( null );
@@ -46,8 +44,7 @@ public class MetasegPlugin implements Command {
 				showGurobiErrorMessage( err );
 				app.quit( 100 );
 			}
-		}
-		else
+		} else
 			log.warn( "Abort start of MetaSeg, because Gurobi is not working properly." );
 	}
 
