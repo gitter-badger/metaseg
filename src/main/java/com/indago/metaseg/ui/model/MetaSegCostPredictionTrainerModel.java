@@ -529,12 +529,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		ArrayList< ValuePair< LabelingSegment, Integer > > badSegs = new ArrayList<>();
 		goodSegs.addAll( goodHypotheses );
 		badSegs.addAll( badHypotheses );
-//		for ( ValuePair< LabelingSegment, Integer > vp : goodHypotheses ) {
-//			goodSegs.add( vp.getA() );
-//		}
-//		for ( ValuePair< LabelingSegment, Integer > vp : badHypotheses ) {
-//			badSegs.add( vp.getA() );
-//		}
 		rf.initializeTrainingData( goodSegs, badSegs );
 		trainForest( rf );
 	}
