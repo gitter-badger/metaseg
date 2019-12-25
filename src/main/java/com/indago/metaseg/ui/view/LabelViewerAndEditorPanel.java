@@ -11,6 +11,7 @@ import com.indago.pg.IndicatorNode;
 import com.indago.pg.segments.SegmentNode;
 
 import net.imagej.patcher.LegacyInjector;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.IntArray;
@@ -20,7 +21,6 @@ import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import sc.fiji.labeleditor.core.model.LabelEditorModel;
 import sc.fiji.labeleditor.plugin.behaviours.select.ConflictSelectionBehaviours;
@@ -42,6 +42,9 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 		this.model = solutionModel;
 		Context context = solutionModel.getModel().getContext();
 		context.inject( this );
+		if ( !solutionModel.getModel().is2D() ) {
+			this.setMode3D( true );
+		}
 		init( solutionModel.getModel().getRawData() );
 	}
 
@@ -52,14 +55,44 @@ public class LabelViewerAndEditorPanel< T extends RealType< T > > extends TimeSl
 	}
 
 	public static LabelEditorModel buildLabelEditorModel( MetaSegSolverModel model ) {
-		ArrayImg< IntType, IntArray > backing =
-				ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
+		ArrayImg< IntType, IntArray > backing = null;
+		if ( model.getModel().is2D() ) {
+			if ( model.getModel().getNumberOfFrames() > 1 ) {
+				backing =
+						ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
+			} else {
+				backing =
+						ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ) );
+			}
+
+		} else {
+			if ( model.getModel().getNumberOfFrames() > 1 ) {
+				backing =
+						ArrayImgs.ints(
+								model.getRawData().dimension( 0 ),
+								model.getRawData().dimension( 1 ),
+								model.getRawData().dimension( 2 ),
+								model.getRawData().dimension( 3 ) );
+			} else {
+				backing =
+						ArrayImgs.ints( model.getRawData().dimension( 0 ), model.getRawData().dimension( 1 ), model.getRawData().dimension( 2 ) );
+			}
+
+		}
+
 		ImgLabeling< WrappedSegmentNode, IntType > labels = new ImgLabeling<>( backing );
-		TimeSliceLabelEditorModel labelEditorModel = new TimeSliceLabelEditorModel<>(labels, model.getRawData(), 2);
+		int timeDimension = model.getModel().getTimeDimensionIndex();
+		TimeSliceLabelEditorModel labelEditorModel = new TimeSliceLabelEditorModel<>( labels, model.getRawData(), timeDimension );
+		RandomAccessibleInterval< LabelingType< WrappedSegmentNode > > slice;
 
 		for ( int bdvTime = 0; bdvTime < model.getModel().getNumberOfFrames(); bdvTime++ ) {
 			if ( model.getPgSolutions() != null && model.getPgSolutions().size() > bdvTime && model.getPgSolutions().get( bdvTime ) != null ) {
-				IntervalView< LabelingType< WrappedSegmentNode > > slice = Views.hyperSlice( labels, 2, bdvTime );
+				if ( model.getModel().getNumberOfFrames() > 1 ) {
+					slice = Views.hyperSlice( labels, timeDimension, bdvTime );
+				} else {
+					slice = labels;
+				}
+
 				final Assignment< IndicatorNode > solution = model.getPgSolution( bdvTime );
 				if ( solution != null ) {
 					for ( final SegmentNode segVar : model.getProblems().get( bdvTime ).getSegments() ) {
