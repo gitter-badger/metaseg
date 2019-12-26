@@ -9,17 +9,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
@@ -28,7 +23,6 @@ import com.indago.metaseg.ui.model.MetaSegCostPredictionTrainerModel;
 
 import bdv.util.Bdv;
 import bdv.util.BdvHandlePanel;
-import indago.ui.progress.ProgressListener;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -40,16 +34,12 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	MetaSegCostPredictionTrainerModel model;
 
-	private JButton btnFetch;
-	private JButton btnPrepareTrainData;
+	private JButton btnFetchGoodHypotheses;
+	private JButton btnFetchBadHypotheses;
+	private JButton btnFetchPredictionHypotheses;
 	private JButton btnComputeSoln;
-	private JButton btnUndo;
-	private ButtonGroup trainingModeButtons;
-
-	private JCheckBox boxContinuousRetrain;
 	private JTextField txtMaxPixelComponentSize;
 	private JTextField txtMinPixelComponentSize;
-	private final List< ProgressListener > progressListeners = new ArrayList<>();
 
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
@@ -87,65 +77,20 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		txtMinPixelComponentSize.addActionListener( this );
 		txtMinPixelComponentSize.addFocusListener( this );
 
-		btnFetch = new JButton( "fetch segments" );
-		btnFetch.addActionListener( this );
+		btnFetchGoodHypotheses = new JButton( "fetch good" );
+		btnFetchGoodHypotheses.addActionListener( this );
+		btnFetchBadHypotheses = new JButton( "fetch bad" );
+		btnFetchBadHypotheses.addActionListener( this );
+		btnFetchPredictionHypotheses = new JButton( "fetch prediction" );
+		btnFetchPredictionHypotheses.addActionListener( this );
 
 		panelFetch.add( new JLabel( "Max segment size:" ), "growx" );
 		panelFetch.add( txtMaxPixelComponentSize, "growx, wrap" );
 		panelFetch.add( new JLabel( "Min segment size:" ), "growx" );
 		panelFetch.add( txtMinPixelComponentSize, "growx, wrap" );
-		panelFetch.add( btnFetch, "growx, wrap" );
-
-		final JPanel panelTrainMode = new JPanel( new MigLayout() );
-		panelTrainMode.setBorder( BorderFactory.createTitledBorder( "training mode" ) );
-
-		trainingModeButtons = new ButtonGroup();
-		JRadioButton bRandom = new JRadioButton( "random" );
-		JRadioButton bActiveLearningNormal = new JRadioButton( "active learning (normal)" );
-		JRadioButton bActiveLeraningWithBalance = new JRadioButton( "active learning (class balance)" );
-		bRandom.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-				model.setALMode( "random" );
-				boxContinuousRetrain.setSelected( false );
-			}
-		} );
-		bActiveLearningNormal.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-				model.setALMode( "active learning (normal)" );
-				boxContinuousRetrain.setSelected( true );
-			}
-		} );
-		bActiveLeraningWithBalance.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-				model.setALMode( "active learning (class balance)" );
-				boxContinuousRetrain.setSelected( true );
-			}
-		} );
-
-		trainingModeButtons.add( bRandom );
-		trainingModeButtons.add( bActiveLearningNormal );
-		trainingModeButtons.add( bActiveLeraningWithBalance );
-
-		boxContinuousRetrain = new JCheckBox( "continuous retrain" );
-		boxContinuousRetrain.addActionListener( this );
-
-		panelTrainMode.add( bRandom, "span 2, growx, wrap" );
-		panelTrainMode.add( bActiveLearningNormal, "span 2, growx, wrap" );
-		panelTrainMode.add( bActiveLeraningWithBalance, "span 2, gapbottom 15, growx, wrap" );
-		panelTrainMode.add( boxContinuousRetrain, "growx, wrap" );
-
-		final JPanel panelPrepareTrainData = new JPanel( new MigLayout() );
-		panelPrepareTrainData.setBorder( BorderFactory.createTitledBorder( "active learning" ) );
-
-		btnPrepareTrainData = new JButton( "start" );
-		btnPrepareTrainData.addActionListener( this );
-		panelPrepareTrainData.add( btnPrepareTrainData, "growx, wrap" );
+		panelFetch.add( btnFetchGoodHypotheses, "growx, wrap" );
+		panelFetch.add( btnFetchBadHypotheses, "growx, wrap" );
+		panelFetch.add( btnFetchPredictionHypotheses, "growx, wrap" );
 
 		final JPanel panelCostPrediction = new JPanel( new MigLayout() );
 		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "compute" ) );
@@ -155,22 +100,8 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		panelCostPrediction.add( btnComputeSoln, "growx, wrap" );
 
-		final JPanel panelUndo = new JPanel( new MigLayout() );
-		panelUndo.setBorder( BorderFactory.createTitledBorder( "" ) );
-
-		btnUndo = new JButton( "undo" );
-		btnUndo.addActionListener( this );
-
-		panelUndo.add( btnUndo, "growx, wrap" );
-
 		controls.add( panelFetch, "growx, wrap" );
-		controls.add( panelTrainMode, "growx, wrap" );
-		controls.add( panelPrepareTrainData, "growx, wrap" );
 		controls.add( panelCostPrediction, "growx, wrap" );
-		controls.add( panelUndo, "growx, wrap" );
-
-		bActiveLeraningWithBalance.doClick();
-		boxContinuousRetrain.doClick();
 
 		final JSplitPane splitPane = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, controls, viewer );
 		splitPane.setResizeWeight( 0.1 ); // 1.0 == extra space given to left component alone!
@@ -183,33 +114,20 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	 */
 	@Override
 	public void actionPerformed( final ActionEvent e ) {
-		if (e.getSource().equals( btnFetch )) {
-			actionFetch();
-		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
-			actionFetchForManualClassify();
+		if (e.getSource().equals( btnFetchGoodHypotheses )) {
+			actionFetch( "good" );
+		} else if ( e.getSource().equals( btnFetchBadHypotheses ) ) {
+			actionFetch( "bad" );
+		} else if ( e.getSource().equals( btnFetchPredictionHypotheses ) ) {
+			actionFetch( "pred" );
 		} else if ( e.getSource().equals( btnComputeSoln ) ) {
-
 			try {
 				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
 
-
-		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
-			JCheckBox state = ( JCheckBox ) e.getSource();
-			if ( state.isSelected() ) {
-				model.setContinuousRetrainState( true );
-			} else {
-				model.setContinuousRetrainState( false );
-			}
-		} else if ( e.getSource().equals( btnUndo ) ) {
-			actionCallUndo();
 		}
-	}
-
-	private void actionCallUndo() {
-		model.callUndo();
 	}
 
 	private void actionComputeAllCostsAndRunSolver() throws Exception {
@@ -247,13 +165,11 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		}
 		model.setAllSegAndCorrespTime();
 		model.randomizeSegmentsAndPrepData();
-		model.showFirstSegmentForManualClassification();
 	}
 
-	private void actionFetch() {
+	private void actionFetch( String quality ) {
 
-		model.purgeSegmentationData();
-		processSegmentationInputs();
+		processSegmentationInputs( quality );
 		MetaSegLog.log.info( "Segmentation results fetched!" );
 	}
 
@@ -291,12 +207,20 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 	}
 
-	private void processSegmentationInputs() {
-		model.createLabelingsFromScratch();
-		model.getConflictGraphs();
-		model.getConflictCliques();
-		model.saveLabelingFrames();
-		model.setSavedCostsLoaded( false );
+	private void processSegmentationInputs( String quality ) {
+		model.createLabelingsFromScratch( quality );
+		if ( quality == "pred" ) {
+			model.getConflictGraphs();
+			model.getConflictCliques();
+			actionFetchForManualClassify();
+		} else if ( quality == "good" ) {
+			model.populateGoodHypothesesList();
+		} else if ( quality == "bad" ) {
+			model.populateBadHypothesesList();
+		}
+
+//		model.saveLabelingFrames();
+//		model.setSavedCostsLoaded( false );
 	}
 
 }

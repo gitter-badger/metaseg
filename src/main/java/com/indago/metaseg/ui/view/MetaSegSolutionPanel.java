@@ -108,13 +108,7 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	 */
 	@Override
 	public void actionPerformed( final ActionEvent e ) {
-		if ( e.getSource().equals( btnContinueMetatrain ) ) {
-			try {
-				actionContinueMetaTrain();
-			} catch ( Exception e1 ) {
-				e1.printStackTrace();
-			}
-		} else if ( e.getSource().equals( btnExportSegCompatibleImages ) ) {
+		if ( e.getSource().equals( btnExportSegCompatibleImages ) ) {
 			actionExportCurrentSolution();
 		} else if ( e.getSource().equals( btnExportLabelFusionProblem ) ) {
 			actionExportLabelFusionProblem();
@@ -263,13 +257,5 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 			problemWriter.write( "Segments from source " + val.getKey() + " " + "selected" + ": " + val.getValue() + " times \n" );
 		}
 	}
-
-	private void actionContinueMetaTrain() throws Exception {
-		MetaSegLog.segmenterLog.info( "Starting MetaSeg optimization..." );
-		model.getModel().getMainPanel().getTabs().setSelectedComponent( model.getModel().getMainPanel().getTabTraining() );
-		model.getModel().getCostTrainerModel().selectSegmentForDisplay();
-
-	}
-
 
 }

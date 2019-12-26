@@ -64,9 +64,21 @@ public class LabelingFrames {
 		processedOrLoaded = false;
 	}
 
-	public boolean processFrames() {
+	public boolean processFrames( String quality ) {
 		try {
 			final List< RandomAccessibleInterval< IntType > > segmentHypothesesImages = getSegmentHypothesesImages();
+			int start = 0;
+			int end = 0;
+			if ( quality == "good" ) {
+				start = 0;
+				end = 0;
+			} else if ( quality == "bad" ) {
+				start = 1;
+				end = 1;
+			} else if ( quality == "pred" ) {
+				start = 2;
+				end = segmentHypothesesImages.size();
+			}
 			if ( segmentHypothesesImages.size() == 0 ) { return false; }
 			frameLabelingBuilders = new ArrayList<>();
 
@@ -76,7 +88,8 @@ public class LabelingFrames {
 				final LabelingBuilder labelingBuilder = new LabelingBuilder( rawFrame );
 				frameLabelingBuilders.add( labelingBuilder );
 				int segCounter = 0;
-				for ( final RandomAccessibleInterval< IntType > sumimg : segmentHypothesesImages ) {
+				for ( int i = start; i <= end; i++ ) {
+					final RandomAccessibleInterval< IntType > sumimg = segmentHypothesesImages.get( i );
 					String segmentationSource = Integer.toString( segCounter );
 					// hyperslize sum_img to desired frame
 					final long[] offset = new long[ sumimg.numDimensions() ];
