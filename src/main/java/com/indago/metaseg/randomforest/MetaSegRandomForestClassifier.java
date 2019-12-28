@@ -192,7 +192,7 @@ public class MetaSegRandomForestClassifier {
 			solidity = polygonSolidityOp.calculate( poly ).get();
 			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
 			elongation = polygonElongationOp.calculate( poly ).get();
-			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time );
+			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
 			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
