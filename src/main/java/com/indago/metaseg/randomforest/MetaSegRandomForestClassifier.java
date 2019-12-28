@@ -179,8 +179,8 @@ public class MetaSegRandomForestClassifier {
 		double solidity;
 		double boundarysizeconvexhull;
 		double elongation;
-		double boundaryPixelSum;
-		double pixelSumNormalized;
+		double normalizedBoundaryPixelSum;
+		double normalizedFacePixelSum;
 		LabelingSegment hypothesis = valuePair.getA();
 		Integer time = valuePair.getB();
 		if ( is2D ) {
@@ -192,8 +192,8 @@ public class MetaSegRandomForestClassifier {
 			solidity = polygonSolidityOp.calculate( poly ).get();
 			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
 			elongation = polygonElongationOp.calculate( poly ).get();
-			boundaryPixelSum = computeBoundaryPixelSum( hypothesis, time );
-			pixelSumNormalized = computeFacePixelSum( hypothesis, time ) / area;
+			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
+			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
 			area = meshAreaOp.calculate( mesh ).get();
@@ -203,8 +203,8 @@ public class MetaSegRandomForestClassifier {
 			solidity = meshSolidityOp.calculate( mesh ).get();
 			boundarysizeconvexhull = meshBoundarySizeConvexHullOp.calculate( mesh ).get();
 			elongation = meshElongationOp.calculate( mesh ).get();
-			boundaryPixelSum = computeBoundaryPixelSum( hypothesis, time );
-			pixelSumNormalized = computeFacePixelSum( hypothesis, time ) / area;
+			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
+			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 		}
 		DenseInstance ins = new DenseInstance( weight, new double[] { area,
 																	  perimeter,
@@ -213,8 +213,8 @@ public class MetaSegRandomForestClassifier {
 																	  solidity,
 																	  boundarysizeconvexhull,
 																	  elongation,
-																	  boundaryPixelSum,
-																	  pixelSumNormalized,
+																	  normalizedBoundaryPixelSum,
+																	  normalizedFacePixelSum,
 																	  category } );
 		return ins;
 	}
