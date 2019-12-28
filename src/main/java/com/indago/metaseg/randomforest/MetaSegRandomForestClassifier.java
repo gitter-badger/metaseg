@@ -180,7 +180,7 @@ public class MetaSegRandomForestClassifier {
 		double boundarysizeconvexhull;
 		double elongation;
 		double normalizedBoundaryPixelSum;
-		double normalizedFacepixelSum;
+		double normalizedFacePixelSum;
 		LabelingSegment hypothesis = valuePair.getA();
 		Integer time = valuePair.getB();
 		if ( is2D ) {
@@ -192,8 +192,8 @@ public class MetaSegRandomForestClassifier {
 			solidity = polygonSolidityOp.calculate( poly ).get();
 			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
 			elongation = polygonElongationOp.calculate( poly ).get();
-			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time );
-			normalizedFacepixelSum = computeFacePixelSum( hypothesis, time ) / area;
+			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
+			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
 			area = meshAreaOp.calculate( mesh ).get();
@@ -204,7 +204,7 @@ public class MetaSegRandomForestClassifier {
 			boundarysizeconvexhull = meshBoundarySizeConvexHullOp.calculate( mesh ).get();
 			elongation = meshElongationOp.calculate( mesh ).get();
 			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
-			normalizedFacepixelSum = computeFacePixelSum( hypothesis, time ) / area;
+			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 		}
 		DenseInstance ins = new DenseInstance( weight, new double[] { area,
 																	  perimeter,
@@ -214,7 +214,7 @@ public class MetaSegRandomForestClassifier {
 																	  boundarysizeconvexhull,
 																	  elongation,
 																	  normalizedBoundaryPixelSum,
-																	  normalizedFacepixelSum,
+																	  normalizedFacePixelSum,
 																	  category } );
 		return ins;
 	}
