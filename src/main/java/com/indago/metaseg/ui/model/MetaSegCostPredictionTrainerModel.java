@@ -314,12 +314,12 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 			predSetThisIter.add( valuePair );
 		}
 		costs = rf.predict( predSetThisIter );
-		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
-			costs.put( segment.getA(), -10d );
-		}
-		for ( ValuePair< LabelingSegment, Integer > segment : badHypotheses ) {
-			costs.put( segment.getA(), 100d ); //Setting positive costs (aggressive) instead of 0 to ensure bad hypotheses are never selected by optimization
-		}
+//		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
+//			costs.put( segment.getA(), -10d );
+//		}
+//		for ( ValuePair< LabelingSegment, Integer > segment : badHypotheses ) {
+//			costs.put( segment.getA(), 100d ); //Setting positive costs (aggressive) instead of 0 to ensure bad hypotheses are never selected by optimization
+//		}
 		System.out.println( "Size of costs updated:" + costs.size() );
 
 		return costs;

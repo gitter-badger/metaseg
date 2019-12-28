@@ -77,7 +77,7 @@ public class LabelingFrames {
 				end = 1;
 			} else if ( quality == "pred" ) {
 				start = 2;
-				end = segmentHypothesesImages.size();
+				end = segmentHypothesesImages.size() - 1;
 			}
 			if ( segmentHypothesesImages.size() == 0 ) { return false; }
 			frameLabelingBuilders = new ArrayList<>();
