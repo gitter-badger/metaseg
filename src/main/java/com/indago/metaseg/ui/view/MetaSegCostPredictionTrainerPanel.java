@@ -88,9 +88,9 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		panelFetch.add( txtMaxPixelComponentSize, "growx, wrap" );
 		panelFetch.add( new JLabel( "Min segment size:" ), "growx" );
 		panelFetch.add( txtMinPixelComponentSize, "growx, wrap" );
-		panelFetch.add( btnFetchGoodHypotheses, "growx, wrap" );
-		panelFetch.add( btnFetchBadHypotheses, "growx, wrap" );
 		panelFetch.add( btnFetchPredictionHypotheses, "growx, wrap" );
+		panelFetch.add( btnFetchBadHypotheses, "growx, wrap" );
+		panelFetch.add( btnFetchGoodHypotheses, "growx, wrap" );
 
 		final JPanel panelCostPrediction = new JPanel( new MigLayout() );
 		panelCostPrediction.setBorder( BorderFactory.createTitledBorder( "compute" ) );
