@@ -17,6 +17,7 @@
 *.log
 .ipynb_checkpoints*
 checkpoint.model
+*.msmodel
 *.tif
 *.xml
 *segmenter.labeling

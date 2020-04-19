@@ -538,10 +538,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public Map< LabelingSegment, Double > computeAllCosts() {
-		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = new ArrayList<>();
-		for ( ValuePair< LabelingSegment, Integer > valuePair : predictionSet ) {
-			predSetThisIter.add( valuePair );
-		}
+		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = getPredSetThisIter();
 		costs = rf.predict( predSetThisIter );
 		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
 			costs.put( segment.getA(), -10d );
@@ -695,4 +692,50 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		costs.clear();
 	}
 
+	public void saveRandomForestClassifier() {
+		if ( !( rf == null ) ) {
+			if ( rf.saveRandomForest() ) {
+				MetaSegLog.log.info( "Saved classifier !!!" );
+			} else {
+				MetaSegLog.log.info( "Cannot save classifier !!!" );
+			}
+
+		} else {
+			JOptionPane
+					.showMessageDialog( null, "No classifier available, train a classifier first!!!", "", JOptionPane.ERROR_MESSAGE );
+		}
+	}
+
+	public void loadRandomForestClassifier() {
+		rf = new MetaSegRandomForestClassifier( parentModel.is2D(), parentModel );
+		rf.loadRandomForest();
+	}
+
+	public boolean isRandomForestLoaded() {
+		return rf.isRandomForestExists();
+	}
+
+	public void predictCostsWithLoadedClassifier() {
+		MetaSegLog.log.info( "Predicting costs ..." );
+		costs = rf.predict( getPredSetThisIter() );
+		MetaSegLog.log.info( "Finished prediction !!!" );
+	}
+
+
+	private ArrayList< ValuePair< LabelingSegment, Integer > > getPredSetThisIter() {
+		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = new ArrayList<>();
+		for ( ValuePair< LabelingSegment, Integer > valuePair : predictionSet ) {
+			predSetThisIter.add( valuePair );
+		}
+		return predSetThisIter;
+	}
+
+	public boolean segmentsExistForPredictionWithLoadedClassifier() {
+		boolean fetchedSegmentsPresent = false;
+		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = getPredSetThisIter();
+		if ( !( predSetThisIter.isEmpty() ) ) {
+			fetchedSegmentsPresent = true;
+		}
+		return fetchedSegmentsPresent;
+	}
 }

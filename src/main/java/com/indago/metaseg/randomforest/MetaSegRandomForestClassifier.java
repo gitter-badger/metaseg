@@ -10,6 +10,7 @@ import org.scijava.plugin.Parameter;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.ui.model.MetaSegModel;
+import com.indago.metaseg.ui.util.ClassifierLoaderAndSaver;
 
 import hr.irb.fastRandomForest.FastRandomForest;
 import net.imagej.ImgPlus;
@@ -259,6 +260,24 @@ public class MetaSegRandomForestClassifier {
 			retSlice = Views.interval( img, mininterval, maxinterval );
 		}
 		return retSlice;
+	}
+
+	public boolean saveRandomForest() {
+		boolean classifierSavedFlag = false;
+		if ( !( forest == null ) ) {
+			classifierSavedFlag =
+					ClassifierLoaderAndSaver
+					.saveRandomForestClassifier( forest, model.getProjectFolder().getFolder().getPath() );
+		}
+		return classifierSavedFlag;
+	}
+
+	public void loadRandomForest() {
+		forest = ClassifierLoaderAndSaver.loadRandomForestClassifier( model.getProjectFolder().getFolder().getPath() );
+	}
+
+	public boolean isRandomForestExists() {
+		return (!(forest==null) ? true : false);
 	}
 
 }
