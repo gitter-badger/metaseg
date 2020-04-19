@@ -51,6 +51,10 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	private JTextField txtMinPixelComponentSize;
 	private final List< ProgressListener > progressListeners = new ArrayList<>();
 
+	private JButton btnSaveRandomForest;
+
+	private JButton btnLoadRandomForest;
+
 	public MetaSegCostPredictionTrainerPanel( final MetaSegCostPredictionTrainerModel costTrainerModel ) {
 		super( new BorderLayout() );
 		this.model = costTrainerModel;
@@ -163,11 +167,24 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		panelUndo.add( btnUndo, "growx, wrap" );
 
+		final JPanel panelSaveAndLoadClassifier = new JPanel( new MigLayout() );
+		panelSaveAndLoadClassifier.setBorder( BorderFactory.createTitledBorder( "" ) );
+
+		btnSaveRandomForest = new JButton( "save classifier" );
+		btnSaveRandomForest.addActionListener( this );
+
+		btnLoadRandomForest = new JButton( "load classifier" );
+		btnLoadRandomForest.addActionListener( this );
+
+		panelSaveAndLoadClassifier.add( btnSaveRandomForest, "growx, wrap" );
+		panelSaveAndLoadClassifier.add( btnLoadRandomForest, "growx, wrap" );
+
 		controls.add( panelFetch, "growx, wrap" );
 		controls.add( panelTrainMode, "growx, wrap" );
 		controls.add( panelPrepareTrainData, "growx, wrap" );
 		controls.add( panelCostPrediction, "growx, wrap" );
 		controls.add( panelUndo, "growx, wrap" );
+		controls.add( panelSaveAndLoadClassifier, "growx, wrap" );
 
 		bActiveLeraningWithBalance.doClick();
 		boxContinuousRetrain.doClick();
@@ -205,7 +222,20 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			}
 		} else if ( e.getSource().equals( btnUndo ) ) {
 			actionCallUndo();
+		} else if ( e.getSource().equals( btnSaveRandomForest ) ) {
+			actionSaveRandomForest();
+		} else if ( e.getSource().equals( btnLoadRandomForest ) ) {
+			try {
+				actionLoadRandomForestAndComputeSolution();
+			} catch ( Exception e1 ) {
+				System.out.println( "Cannot load saved classifier!!!" ); //TODO show error dialog
+				e1.printStackTrace();
+			}
 		}
+	}
+
+	private void actionSaveRandomForest() {
+		model.saveRandomForestClassifier();
 	}
 
 	private void actionCallUndo() {
@@ -297,6 +327,27 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getConflictCliques();
 		model.saveLabelingFrames();
 		model.setSavedCostsLoaded( false );
+	}
+
+	private void actionLoadRandomForestAndComputeSolution() throws Exception {
+		model.setAllSegAndCorrespTime();
+		model.randomizeSegmentsAndPrepData();
+		boolean fetchedSegmentsPresent = model.segmentsExistForPredictionWithLoadedClassifier();
+		if ( fetchedSegmentsPresent ) {
+			model.loadRandomForestClassifier();
+			if ( model.isRandomForestLoaded() ) {
+				model.predictCostsWithLoadedClassifier();
+				MetaSegLog.log.info( "Computing solution !!!" );
+				actionComputeAllCostsAndRunSolver();
+			} else {
+				MetaSegLog.log.info( "Classifier either does not exist or was not loaded !!!" );
+			}
+
+		} else {
+			JOptionPane
+					.showMessageDialog( null, "No segments present, fetch segments first!!!", "", JOptionPane.ERROR_MESSAGE );
+		}
+
 	}
 
 }
