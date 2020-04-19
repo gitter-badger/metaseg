@@ -146,7 +146,7 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 
 			final BufferedWriter problemWriter = new BufferedWriter( new FileWriter( exportFile ) );
 			problemWriter.write( "# MetaSeg problem export from " + strNow + "\n" );
-			List< Map< String, Integer > > segSourceStatsAllTime = SolutionAndStatsExporter.exportSegSourcesStats( model, projectFolderBasePath );
+			List< Map< String, Integer > > segSourceStatsAllTime = SolutionAndStatsExporter.exportSegSourcesStats( model );
 			for (int frame = 0; frame< segSourceStatsAllTime.size(); frame++) {
 				Map< String, Integer > segSourceStatsPerTime = segSourceStatsAllTime.get( frame );
 				problemWriter.write( String.format( "\n# t=%d\n", frame ) );
