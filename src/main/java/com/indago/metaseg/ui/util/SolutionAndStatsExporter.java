@@ -95,7 +95,7 @@ public class SolutionAndStatsExporter {
 		}
 	}
 
-	public static List< Map< String, Integer > > exportSegSourcesStats( MetaSegSolverModel msSolverModel, File projectFolderBasePath ) {
+	public static List< Map< String, Integer > > exportSegSourcesStats( MetaSegSolverModel msSolverModel ) {
 		List< String > segSourcesPerTime = null;
 		List<Map<String, Integer>> segSources = new ArrayList<>();
 		long timePoints = msSolverModel.getModel().getNumberOfFrames();

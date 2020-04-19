@@ -112,7 +112,7 @@ public class MetaSegRandomForestClassifier {
 		attInfo.add( new Attribute( "circularity" ) );
 		attInfo.add( new Attribute( "solidity" ) );
 		attInfo.add( new Attribute( "boundarysizeconvexhull" ) );
-		attInfo.add( new Attribute( "elongation" ) );
+//		attInfo.add( new Attribute( "elongation" ) );
 		attInfo.add( new Attribute( "boundarypixelsum" ) );
 		attInfo.add( new Attribute( "facepixelsum" ) );
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
@@ -191,7 +191,7 @@ public class MetaSegRandomForestClassifier {
 			circularity = polygonCircularityOp.calculate( poly ).get();
 			solidity = polygonSolidityOp.calculate( poly ).get();
 			boundarysizeconvexhull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
-			elongation = polygonElongationOp.calculate( poly ).get();
+//			elongation = polygonElongationOp.calculate( poly ).get();
 			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
 			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 		} else {
@@ -212,7 +212,7 @@ public class MetaSegRandomForestClassifier {
 																	  circularity,
 																	  solidity,
 																	  boundarysizeconvexhull,
-																	  elongation,
+//																	  elongation,
 																	  normalizedBoundaryPixelSum,
 																	  normalizedFacePixelSum,
 																	  category } );
@@ -260,4 +260,5 @@ public class MetaSegRandomForestClassifier {
 		}
 		return retSlice;
 	}
+
 }
