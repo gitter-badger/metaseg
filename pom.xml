@@ -19,8 +19,8 @@
 		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
 		<releaseProfiles>deploy-to-imagej</releaseProfiles>
 		<imagej-legacy.version>0.37.0</imagej-legacy.version>
- 		<scijava-common.version>2.81.0-SNAPSHOT</scijava-common.version>
- 		<imagej-common.version>0.29.2-SNAPSHOT</imagej-common.version>
+<!-- 		<scijava-common.version>2.81.0-SNAPSHOT</scijava-common.version>-->
+<!-- 		<imagej-common.version>0.29.2-SNAPSHOT</imagej-common.version>-->
  		<enforcer.skip>true</enforcer.skip>
 	</properties>
 
@@ -29,7 +29,7 @@
 	<version>0.1.0-SNAPSHOT</version>
 
 	<name>metaseg</name>
-	<description>Meta-segmentation tool for joining many segmentation 
+	<description>Meta-segmentation tool for joining many segmentation
 		hypotheses created by various methods.</description>
 	<url>https:github.com/TrNdy/metaseg</url>
 	<inceptionYear>2019</inceptionYear>
@@ -149,7 +149,7 @@
 			<groupId>com.indago</groupId>
 			<artifactId>IndagoLabkitSegmentationPlugin</artifactId>
 		</dependency>
-		
+
 	</dependencies>
 
 	<developers>
