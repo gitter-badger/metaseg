@@ -105,6 +105,7 @@ public class LabelingFrames {
 									darkToBright );
 
 					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+					labelingBuilder.pack();
 					segCounter += 1;
 				}
 			}
