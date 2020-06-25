@@ -20,6 +20,7 @@
 		<releaseProfiles>deploy-to-imagej</releaseProfiles>
 		<imagej-legacy.version>0.37.0</imagej-legacy.version>
 		<imglib2.version>5.9.0</imglib2.version>
+		<imglib2-roi.version>0.10.3-SNAPSHOT</imglib2-roi.version>
 <!-- 		<scijava-common.version>2.81.0-SNAPSHOT</scijava-common.version>-->
 <!-- 		<imagej-common.version>0.29.2-SNAPSHOT</imagej-common.version>-->
  		<enforcer.skip>true</enforcer.skip>
@@ -80,6 +81,10 @@
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-ij</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-roi</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
