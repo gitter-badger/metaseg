@@ -3,6 +3,7 @@
  */
 package com.indago.metaseg.data;
 
+import com.indago.data.segmentation.groundtruth.FlatForest;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,6 +26,8 @@ import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSegmentationCollectionModel;
 
 import indago.ui.progress.ProgressListener;
+import java.util.Set;
+import java.util.stream.Collectors;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.DoubleType;
@@ -95,16 +98,24 @@ public class LabelingFrames {
 					}
 
 					// build component tree on frame
-					final FilteredComponentTree< IntType > tree =
-							FilteredComponentTree.buildComponentTree(
-									sumImgFrame,
-									new IntType(),
-									minHypothesisSize,
-									maxHypothesisSize,
-									maxGrowthPerStep,
-									darkToBright );
 
-					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+//					final FilteredComponentTree< IntType > tree =
+//							FilteredComponentTree.buildComponentTree(
+//									sumImgFrame,
+//									new IntType(),
+//									minHypothesisSize,
+//									maxHypothesisSize,
+//									maxGrowthPerStep,
+//									darkToBright );
+//
+//					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+
+					final FlatForest flat = new FlatForest( sumImgFrame, new IntType( 0 ) );
+					final Set< FlatForest.Node > filteredRoots = flat.roots().stream()
+							.filter( node -> node.size() >= minHypothesisSize && node.size() <= maxHypothesisSize )
+							.collect( Collectors.toSet() );
+
+					labelingBuilder.buildLabelingForest( () -> filteredRoots, segmentationSource );
 					labelingBuilder.pack();
 					segCounter += 1;
 				}
