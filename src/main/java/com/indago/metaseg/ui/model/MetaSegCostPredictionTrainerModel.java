@@ -34,6 +34,7 @@ import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.data.LabelingFrames;
 import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
 import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
+import com.indago.metaseg.threadedfeaturecomputation.MetaSegSegmentFeatureComputation;
 import com.indago.metaseg.ui.util.Utils;
 import com.indago.ui.bdv.BdvOwner;
 import com.indago.util.ImglibUtil;
@@ -98,6 +99,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private final List< ProgressListener > progressListeners = new ArrayList<>();
 	private boolean savedCostsLoaded;
 	private AffineTransform3D transform;
+	private MetaSegSegmentFeatureComputation computeAllFeatures;
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -738,4 +740,16 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		}
 		return fetchedSegmentsPresent;
 	}
+
+	public void computeAllFeatures() throws InterruptedException {
+		computeAllFeatures = new MetaSegSegmentFeatureComputation( parentModel, allSegsWithTime );
+		Thread featureComputerThread = new Thread( computeAllFeatures );
+		featureComputerThread.start();
+		featureComputerThread.join();
+	}
+
+	public MetaSegSegmentFeatureComputation getComputeAllFeaturesObject() {
+		return computeAllFeatures;
+	}
+
 }

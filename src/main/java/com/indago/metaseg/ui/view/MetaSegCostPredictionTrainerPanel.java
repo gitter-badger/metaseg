@@ -203,7 +203,13 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		if (e.getSource().equals( btnFetch )) {
 			actionFetch();
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
-			actionFetchForManualClassify();
+			try {
+				actionFetchForManualClassifyAndComputeAllFeatures();
+			} catch ( InterruptedException e1 ) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
 		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 
 			try {
@@ -257,7 +263,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 //		model.getParentModel().getMainPanel().getTabSolution().getLabelEditorBasedSolutionAndLevEditingTab().populateBdv( model.getParentModel().getSolutionModel() );
 	}
 
-	private void actionFetchForManualClassify() {
+	private void actionFetchForManualClassifyAndComputeAllFeatures() throws InterruptedException {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
 		if ( model.isCostsExists() ) {
 			int rewriteCosts = JOptionPane.showConfirmDialog(
@@ -277,6 +283,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		}
 		model.setAllSegAndCorrespTime();
 		model.randomizeSegmentsAndPrepData();
+		model.computeAllFeatures();
 		model.showFirstSegmentForManualClassification();
 	}
 

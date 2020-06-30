@@ -124,7 +124,7 @@ public class MetaSegSolutionPanel extends JPanel implements ActionListener {
 	}
 
 	private void actionExportSegSourceStats() {
-		MetaSegLog.segmenterLog.info( "Computing segmnentation source statistics for the solution..." );
+		MetaSegLog.segmenterLog.info( "Computing segmentation source statistics for the solution..." );
 		final File projectFolderBasePath = UniversalFileChooser.showLoadFolderChooser(
 				tabSolutionAndLevEditing.getInterfaceHandle().getViewerPanel(),
 				"",
