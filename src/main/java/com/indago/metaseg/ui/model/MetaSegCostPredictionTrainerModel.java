@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -100,6 +101,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private boolean savedCostsLoaded;
 	private AffineTransform3D transform;
 	private MetaSegSegmentFeatureComputation computeAllFeatures;
+	private List< Runnable > listeners = new CopyOnWriteArrayList< Runnable >();
 
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
@@ -120,6 +122,16 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 
+	public void addCompletionListener( Runnable listener ) {
+		listeners.add( listener );
+	}
+
+	private void notifyCompletionListeners() {
+		for ( Runnable listener : listeners ) {
+			listener.run();
+		}
+
+	}
 	public MetaSegModel getParentModel() {
 		return parentModel;
 	}
@@ -743,9 +755,12 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public void computeAllFeatures() throws InterruptedException {
 		computeAllFeatures = new MetaSegSegmentFeatureComputation( parentModel, allSegsWithTime );
-		Thread featureComputerThread = new Thread( computeAllFeatures );
+		Thread featureComputerThread = new Thread( () -> {
+			computeAllFeatures.run();
+			notifyCompletionListeners();
+		} );
+		featureComputerThread.setPriority( Thread.MIN_PRIORITY );
 		featureComputerThread.start();
-		featureComputerThread.join();
 	}
 
 	public MetaSegSegmentFeatureComputation getComputeAllFeaturesObject() {

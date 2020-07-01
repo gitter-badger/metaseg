@@ -59,7 +59,9 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		super( new BorderLayout() );
 		this.model = costTrainerModel;
 		buildGui();
+		costTrainerModel.addCompletionListener( () -> btnComputeSoln.setEnabled( true ) );
 	}
+
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
@@ -156,7 +158,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		btnComputeSoln = new JButton( "compute solution" );
 		btnComputeSoln.addActionListener( this );
-
+		btnComputeSoln.setEnabled( false );
 		panelCostPrediction.add( btnComputeSoln, "growx, wrap" );
 
 		final JPanel panelUndo = new JPanel( new MigLayout() );
@@ -211,13 +213,11 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 			}
 
 		} else if ( e.getSource().equals( btnComputeSoln ) ) {
-
 			try {
 				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-
 
 		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
 			JCheckBox state = ( JCheckBox ) e.getSource();

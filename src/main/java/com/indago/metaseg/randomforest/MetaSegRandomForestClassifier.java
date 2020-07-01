@@ -9,6 +9,7 @@ import java.util.Map;
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.threadedfeaturecomputation.FeaturesRow;
 import com.indago.metaseg.threadedfeaturecomputation.MetaSegSegmentFeatureComputation;
+import com.indago.metaseg.threadedfeaturecomputation.MetaSegSingleSegmentFeatureComputation;
 import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.util.ClassifierLoaderAndSaver;
 
@@ -99,9 +100,13 @@ public class MetaSegRandomForestClassifier {
 	private DenseInstance getPrecomputedHypothesisFeatures( ValuePair< LabelingSegment, Integer > valuePair, double weight, int category ) {
 
 		MetaSegSegmentFeatureComputation computeAllFeaturesObject = model.getCostTrainerModel().getComputeAllFeaturesObject();
-		HashMap< LabelingSegment, FeaturesRow > featuresTable = computeAllFeaturesObject.getFeaturesTable();
+		Map< LabelingSegment, FeaturesRow > featuresTable = computeAllFeaturesObject.getFeaturesTable();
 		FeaturesRow segmentFeatures = featuresTable.get( valuePair.getA() );
-
+		if(segmentFeatures == null) {
+			MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( model );
+			segmentFeatures = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
+			featuresTable.put( valuePair.getA(), segmentFeatures );
+		}
 		DenseInstance ins = new DenseInstance( weight, new double[] { segmentFeatures.getArea(),
 		                                                              segmentFeatures.getPerimeter(),
 		                                                              segmentFeatures.getConvexity(),
