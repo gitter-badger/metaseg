@@ -3,6 +3,7 @@
  */
 package com.indago.metaseg.data;
 
+import com.indago.data.segmentation.groundtruth.FlatForest;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,9 +26,12 @@ import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSegmentationCollectionModel;
 
 import indago.ui.progress.ProgressListener;
+import java.util.Set;
+import java.util.stream.Collectors;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import weka.gui.ExtensionFileFilter;
@@ -69,8 +73,10 @@ public class LabelingFrames {
 			final List< RandomAccessibleInterval< IntType > > segmentHypothesesImages = getSegmentHypothesesImages();
 			if ( segmentHypothesesImages.size() == 0 ) { return false; }
 			frameLabelingBuilders = new ArrayList<>();
+			final long numberOfFrames = model.getModel().getNumberOfFrames();
+			final int timeDimensionIndex = model.getModel().getTimeDimensionIndex();
 
-			for ( int frameId = 0; frameId < model.getModel().getNumberOfFrames(); frameId++ ) {
+			for ( int frameId = 0; frameId < numberOfFrames; frameId++ ) {
 
 				final RandomAccessibleInterval< DoubleType > rawFrame = model.getModel().getFrame( frameId );
 				final LabelingBuilder labelingBuilder = new LabelingBuilder( rawFrame );
@@ -78,29 +84,39 @@ public class LabelingFrames {
 				int segCounter = 0;
 				for ( final RandomAccessibleInterval< IntType > sumimg : segmentHypothesesImages ) {
 					String segmentationSource = Integer.toString( segCounter );
+
 					// hyperslize sum_img to desired frame
-					final long[] offset = new long[ sumimg.numDimensions() ];
-					final IntervalView< IntType > sumImgFrame;
-					if ( model.getModel().getTimeDimensionIndex() == -1 ) {
-						sumImgFrame = Views.offset( sumimg, offset );
+					final RandomAccessibleInterval< IntType > sumImgFrame;
+					if ( timeDimensionIndex == -1 ) {
+						sumImgFrame = sumimg;
 					} else {
-						offset[ model.getModel().getTimeDimensionIndex() ] = frameId;
-						sumImgFrame = Views.offset(
-								Views.hyperSlice( sumimg, model.getModel().getTimeDimensionIndex(), frameId ),
-								offset );
+						final long[] min = Intervals.minAsLongArray( sumimg );
+						final long[] max = Intervals.maxAsLongArray( sumimg );
+						min[ timeDimensionIndex ] = frameId;
+						max[ timeDimensionIndex ] = frameId;
+						sumImgFrame = Views.zeroMin( Views.interval( sumimg, min, max ) );
 					}
 
 					// build component tree on frame
-					final FilteredComponentTree< IntType > tree =
-							FilteredComponentTree.buildComponentTree(
-									sumImgFrame,
-									new IntType(),
-									minHypothesisSize,
-									maxHypothesisSize,
-									maxGrowthPerStep,
-									darkToBright );
 
-					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+//					final FilteredComponentTree< IntType > tree =
+//							FilteredComponentTree.buildComponentTree(
+//									sumImgFrame,
+//									new IntType(),
+//									minHypothesisSize,
+//									maxHypothesisSize,
+//									maxGrowthPerStep,
+//									darkToBright );
+//
+//					labelingBuilder.buildLabelingForest( tree, segmentationSource );
+
+					final FlatForest flat = new FlatForest( sumImgFrame, new IntType( 0 ) );
+					final Set< FlatForest.Node > filteredRoots = flat.roots().stream()
+							.filter( node -> node.size() >= minHypothesisSize && node.size() <= maxHypothesisSize )
+							.collect( Collectors.toSet() );
+
+					labelingBuilder.buildLabelingForest( () -> filteredRoots, segmentationSource );
+					labelingBuilder.pack();
 					segCounter += 1;
 				}
 			}

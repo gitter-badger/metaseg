@@ -59,7 +59,9 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		super( new BorderLayout() );
 		this.model = costTrainerModel;
 		buildGui();
+		costTrainerModel.addCompletionListener( () -> btnComputeSoln.setEnabled( true ) );
 	}
+
 
 	private void buildGui() {
 		final JPanel viewer = new JPanel( new BorderLayout() );
@@ -156,7 +158,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 
 		btnComputeSoln = new JButton( "compute solution" );
 		btnComputeSoln.addActionListener( this );
-
+		btnComputeSoln.setEnabled( false );
 		panelCostPrediction.add( btnComputeSoln, "growx, wrap" );
 
 		final JPanel panelUndo = new JPanel( new MigLayout() );
@@ -203,15 +205,19 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		if (e.getSource().equals( btnFetch )) {
 			actionFetch();
 		} else if ( e.getSource().equals( btnPrepareTrainData ) ) {
-			actionFetchForManualClassify();
-		} else if ( e.getSource().equals( btnComputeSoln ) ) {
+			try {
+				actionFetchForManualClassifyAndComputeAllFeatures();
+			} catch ( InterruptedException e1 ) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 
+		} else if ( e.getSource().equals( btnComputeSoln ) ) {
 			try {
 				actionComputeAllCostsAndRunSolver();
 			} catch ( Exception e1 ) {
 				e1.printStackTrace();
 			}
-
 
 		} else if ( e.getSource().equals( boxContinuousRetrain ) ) {
 			JCheckBox state = ( JCheckBox ) e.getSource();
@@ -254,10 +260,10 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		model.getParentModel().getMainPanel().getTabs().setSelectedComponent( model.getParentModel().getMainPanel().getTabSolution() );
 		MetaSegLog.segmenterLog.info( "Done solving!" );
 		MetaSegLog.segmenterLog.info( "Populating the solution ..." );
-		model.getParentModel().getMainPanel().getTabSolution().getLabelEditorBasedSolutionAndLevEditingTab().populateBdv( model.getParentModel().getSolutionModel() );
+//		model.getParentModel().getMainPanel().getTabSolution().getLabelEditorBasedSolutionAndLevEditingTab().populateBdv( model.getParentModel().getSolutionModel() );
 	}
 
-	private void actionFetchForManualClassify() {
+	private void actionFetchForManualClassifyAndComputeAllFeatures() throws InterruptedException {
 		MetaSegLog.log.info( "Fetching random segments for manual classification..." );
 		if ( model.isCostsExists() ) {
 			int rewriteCosts = JOptionPane.showConfirmDialog(
@@ -277,6 +283,7 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 		}
 		model.setAllSegAndCorrespTime();
 		model.randomizeSegmentsAndPrepData();
+		model.computeAllFeatures();
 		model.showFirstSegmentForManualClassification();
 	}
 
