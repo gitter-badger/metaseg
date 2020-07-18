@@ -355,16 +355,16 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				double uncertaintyUB;
 				ValuePair< LabelingSegment, Integer > chosenSegWIthTime = null;
 				if ( alMode == "active learning (normal)" ) {
-					uncertaintyLB = -0.262d; // corresponds to -(ln(0.65)+0.693)
-					uncertaintyUB = 0.356d; // corresponds to -(ln(0.35)+0.693)
+					uncertaintyLB = 0.40d;
+					uncertaintyUB = 0.60d;
 					chosenSegWIthTime = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
 				} else if ( alMode == "active learning (class balance)" ) {
 					if ( goodHypotheses.size() >= badHypotheses.size() ) {
-						uncertaintyLB = 0.105d; // corresponds to -(ln(0.45)+0.693)
-						uncertaintyUB = 21.0d; // corresponds to -(ln(0.0+1e-9)+0.693)
+						uncertaintyLB = 0.25d;
+						uncertaintyUB = 0.499d;
 					} else {
-						uncertaintyLB = -0.095d; // corresponds to -(ln(0.55)+0.693)
-						uncertaintyUB = -0.693d; // corresponds to -(ln(1.0)+0.693)
+						uncertaintyLB = 0.501d;
+						uncertaintyUB = 0.75d;
 					}
 					chosenSegWIthTime = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
 				} else if ( alMode == "random" ) {
@@ -488,17 +488,16 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		bdvHandlePanel.getViewerPanel().setCurrentViewerTransform( transform );
 	}
 
-	private ValuePair< LabelingSegment, Integer > pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) { //safeguard against size of pred set = 0 needs checking
+	private ValuePair< LabelingSegment, Integer > pickUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB ) throws Exception { //safeguard against size of pred set = 0 needs checking
 		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.1 * predictionSet.size() ), predictionSet.size() );
 		int id = 0;
-		double cost;
+		double prob;
 
 		ValuePair< LabelingSegment, Integer > hypothesis = new ValuePair< LabelingSegment, Integer >( null, null );
 		do {
 			if(id<potentIds.length-1) {
 				hypothesis = predictionSet.get( potentIds[ id ] );
-				Map< LabelingSegment, Double > segAndCost = computeIntermediateCosts( hypothesis );
-				cost = segAndCost.get( hypothesis.getA() );
+				prob = computeIntermediateProbability( hypothesis );
 				id = id + 1;
 			} else { //break the loop if id exhausts and then show a random segment
 				MetaSegLog.log.info( "Segment for class balance not found, falling back to random mode for this iteration..." );
@@ -506,7 +505,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				break;
 			}
 		}
-		while ( !( cost > uncertaintyLB && cost < uncertaintyUB ) );
+		while ( !( prob > uncertaintyLB && prob < uncertaintyUB ) );
 		return hypothesis;
 	}
 
@@ -549,9 +548,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		rf.train();
 	}
 
-	public Map< LabelingSegment, Double > computeAllCosts() {
+	public Map< LabelingSegment, Double > computeAllCosts() throws Exception {
 		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = getPredSetThisIter();
-		costs = rf.predict( predSetThisIter );
+		costs = computeCosts( predSetThisIter );
 		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
 			costs.put( segment.getA(), -1.0 * ( Math.log( 1.0 ) + 0.693 ) );
 		}
@@ -563,13 +562,34 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return costs;
 	}
 
-	public Map< LabelingSegment, Double > computeIntermediateCosts( ValuePair< LabelingSegment, Integer > hypothesis ) {
+	private Map< LabelingSegment, Double > computeCosts( List< ValuePair< LabelingSegment, Integer > > predictionSet ) throws Exception {
+		Map< LabelingSegment, Double > costs = new HashMap<>();
+		for ( final ValuePair< LabelingSegment, Integer > segment : predictionSet ) {
+			double prob = rf.predictSegmentProbability( segment );  // probability of class 1 ("good" class)
+			System.out.println( "prob:" + prob );
+			costs.put( segment.getA(), convertProbToCost( prob ) );
+		}
+		return costs;
+	}
+
+	private double convertProbToCost( double prob ) {
+		double cost;
+		if ( prob == 0.0 ) {
+			cost = -1.0 * ( Math.log( prob + 1e-9 ) + 0.693 );
+		} else {
+			// y = ln(prob)+0.693 is 0 for x = 0.5 and positive for x>0.5 and negative for x<0.5 
+			cost = -1.0 * ( Math.log( prob ) + 0.693 );
+		}
+		return cost;
+	}
+
+	public double computeIntermediateProbability( ValuePair< LabelingSegment, Integer > hypothesis ) throws Exception {
 		ArrayList< ValuePair< LabelingSegment, Integer > > tempList = new ArrayList<>();
 		tempList.add( hypothesis );
-		Map< LabelingSegment, Double > localCosts = rf.predict( tempList );
+		double segmentProbability = rf.predictSegmentProbability( hypothesis );
 		int trainsetsize = goodHypotheses.size() + badHypotheses.size();
 		System.out.println( "Training set size:" + trainsetsize );
-		return localCosts;
+		return segmentProbability;
 	}
 
 
@@ -727,9 +747,9 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return rf.isRandomForestExists();
 	}
 
-	public void predictCostsWithLoadedClassifier() {
+	public void predictCostsWithLoadedClassifier() throws Exception {
 		MetaSegLog.log.info( "Predicting costs ..." );
-		costs = rf.predict( getPredSetThisIter() );
+		costs = computeCosts( getPredSetThisIter() );
 		MetaSegLog.log.info( "Finished prediction !!!" );
 	}
 

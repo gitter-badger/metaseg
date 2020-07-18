@@ -2,7 +2,6 @@ package com.indago.metaseg.randomforest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -75,28 +74,12 @@ public class MetaSegRandomForestClassifier {
 		forest.buildClassifier( trainingData );
 	}
 
-	public Map< LabelingSegment, Double > predict( List< ValuePair< LabelingSegment, Integer > > predictionSet ) {
-		Map< LabelingSegment, Double > costs = new HashMap<>();
+	public double predictSegmentProbability( ValuePair< LabelingSegment, Integer > segment ) throws Exception {
 		Instances testData = newTable();
-		for ( final ValuePair< LabelingSegment, Integer > segment : predictionSet ) {
-			DenseInstance ins = getPrecomputedHypothesisFeatures( segment, 1, 0 );
-			ins.setDataset( testData );
-			try {
-				double prob = forest.distributionForInstance( ins )[ 1 ]; // probability of class 1 ("good" class)
-				System.out.println( "prob:" + prob );
-				if ( prob == 0.0 ) {
-					costs.put( segment.getA(), -1.0 * ( Math.log( prob + 1e-9 ) + 0.693 ) );
-				} else {
-					// y = ln(prob)+0.693 is 0 for x = 0.5 and positive for x>0.5 and negative for x<0.5 
-					costs.put( segment.getA(), -1.0 * ( Math.log( prob ) + 0.693 ) );
-				}
-
-			} catch ( Exception e ) {
-				e.printStackTrace();
-			}
-		}
-
-		return costs;
+		DenseInstance ins = getPrecomputedHypothesisFeatures( segment, 1, 0 );
+		ins.setDataset( testData );
+		double prob = forest.distributionForInstance( ins )[ 1 ];
+		return prob; //This returns the probability of segment belonging to good class
 	}
 
 	private DenseInstance getPrecomputedHypothesisFeatures( ValuePair< LabelingSegment, Integer > valuePair, double weight, int category ) {
