@@ -83,10 +83,12 @@ public class MetaSegRandomForestClassifier {
 			ins.setDataset( testData );
 			try {
 				double prob = forest.distributionForInstance( ins )[ 1 ]; // probability of class 1 ("good" class)
-				if ( prob < 0.5 ) {
-					costs.put( segment.getA(), prob );
+				System.out.println( "prob:" + prob );
+				if ( prob == 0.0 ) {
+					costs.put( segment.getA(), -1.0 * ( Math.log( prob + 1e-9 ) + 0.693 ) );
 				} else {
-					costs.put( segment.getA(), -prob );
+					// y = ln(prob)+0.693 is 0 for x = 0.5 and positive for x>0.5 and negative for x<0.5 
+					costs.put( segment.getA(), -1.0 * ( Math.log( prob ) + 0.693 ) );
 				}
 
 			} catch ( Exception e ) {

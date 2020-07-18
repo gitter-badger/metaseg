@@ -354,19 +354,17 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 				double uncertaintyLB;
 				double uncertaintyUB;
 				ValuePair< LabelingSegment, Integer > chosenSegWIthTime = null;
-				if ( alMode == "active learning (normal)" ) { //TODO fix for positive costs 
-					uncertaintyLB = -0.8d;
-					uncertaintyUB = -0.2d;
+				if ( alMode == "active learning (normal)" ) {
+					uncertaintyLB = -0.262d; // corresponds to -(ln(0.65)+0.693)
+					uncertaintyUB = 0.356d; // corresponds to -(ln(0.35)+0.693)
 					chosenSegWIthTime = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
 				} else if ( alMode == "active learning (class balance)" ) {
 					if ( goodHypotheses.size() >= badHypotheses.size() ) {
-//						uncertaintyLB = -0.49d;
-//						uncertaintyUB = -0.2d;
-						uncertaintyLB = 0.2d;
-						uncertaintyUB = 0.49d;
+						uncertaintyLB = 0.105d; // corresponds to -(ln(0.45)+0.693)
+						uncertaintyUB = 21.0d; // corresponds to -(ln(0.0+1e-9)+0.693)
 					} else {
-						uncertaintyLB = -0.8d;
-						uncertaintyUB = -0.51d;
+						uncertaintyLB = -0.095d; // corresponds to -(ln(0.55)+0.693)
+						uncertaintyUB = -0.693d; // corresponds to -(ln(1.0)+0.693)
 					}
 					chosenSegWIthTime = pickUncertianSegmentIteratively( uncertaintyLB, uncertaintyUB );
 				} else if ( alMode == "random" ) {
@@ -555,10 +553,10 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		ArrayList< ValuePair< LabelingSegment, Integer > > predSetThisIter = getPredSetThisIter();
 		costs = rf.predict( predSetThisIter );
 		for ( ValuePair< LabelingSegment, Integer > segment : goodHypotheses ) {
-			costs.put( segment.getA(), -10d );
+			costs.put( segment.getA(), -1.0 * ( Math.log( 1.0 ) + 0.693 ) );
 		}
 		for ( ValuePair< LabelingSegment, Integer > segment : badHypotheses ) {
-			costs.put( segment.getA(), 100d ); //Setting positive costs (aggressive) instead of 0 to ensure bad hypotheses are never selected by optimization
+			costs.put( segment.getA(), -1.0 * ( Math.log( 0.0 + 1e-9 ) + 0.693 ) ); //Setting positive costs (aggressive) instead of 0 to ensure bad hypotheses are never selected by optimization
 		}
 		System.out.println( "Size of costs updated:" + costs.size() );
 
