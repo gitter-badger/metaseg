@@ -5,10 +5,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
-import org.junit.Test;
 import org.scijava.Context;
 import org.scijava.app.StatusService;
 import org.scijava.io.IOService;
@@ -62,7 +60,7 @@ public class MetaSegTest {
 	}
 
 //	@Test
-	public < T extends RealType< T > > void testMetaSegApplication() throws IOException {
+	public < T extends RealType< T > > void testMetaSegApplication() throws Exception {
 		final Context context =
 				new Context( FormatService.class, OpService.class, OpMatchingService.class, IOService.class, DatasetIOService.class, LocationService.class, DatasetService.class, ImgUtilityService.class, StatusService.class, TranslatorService.class, QTJavaService.class, TiffService.class, CodecService.class, JAIIIOService.class, LogService.class, IndagoSegmentationPluginService.class, PlaneConverterService.class, InitializeService.class, XMLService.class, FilePatternService.class, WidgetService.class );
 		MetaSegContext.segPlugins = context.getService( IndagoSegmentationPluginService.class );
