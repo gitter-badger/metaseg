@@ -3,12 +3,10 @@ package com.indago.metaseg.randomforest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.threadedfeaturecomputation.FeaturesRow;
 import com.indago.metaseg.threadedfeaturecomputation.MetaSegSegmentFeatureComputation;
-import com.indago.metaseg.threadedfeaturecomputation.MetaSegSingleSegmentFeatureComputation;
 import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.util.ClassifierLoaderAndSaver;
 import com.indago.metaseg.ui.view.FeatureSelection;
@@ -83,15 +81,8 @@ public class MetaSegRandomForestClassifier {
 	private DenseInstance getPrecomputedHypothesisFeatures( ValuePair< LabelingSegment, Integer > valuePair, double weight, int category ) {
 
 		MetaSegSegmentFeatureComputation computeAllFeaturesObject = model.getCostTrainerModel().getComputeAllFeaturesObject();
+		FeaturesRow featureRow = computeAllFeaturesObject.getFeatureRow(valuePair);
 		FeatureSelection featureSelection = computeAllFeaturesObject.getFeatureSelection();
-		Map< LabelingSegment, FeaturesRow > featuresTable = computeAllFeaturesObject.getFeaturesTable();
-		FeaturesRow featureRow = featuresTable.get( valuePair.getA() );
-		if(featureRow == null) {
-			MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( model );
-			singleFeatureComputerObject.setFeatureSelection( featureSelection );
-			featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
-			featuresTable.put( valuePair.getA(), featureRow );
-		}
 		double[] values = new double[ featureSelection.numberOfSelectedFeatures() + 1 ];
 		int i = 0;
 		for ( FeatureType featureType : featureSelection.getSelectedFeatures() ) {

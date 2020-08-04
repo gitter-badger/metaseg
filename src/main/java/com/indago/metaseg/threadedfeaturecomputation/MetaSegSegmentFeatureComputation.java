@@ -8,16 +8,16 @@ import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.view.FeatureSelection;
 
-import net.imagej.ImgPlus;
 import net.imglib2.parallel.TaskExecutor;
 import net.imglib2.parallel.TaskExecutors;
-import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.ValuePair;
 
+/**
+ * Calculates the {@link FeaturesRow} for a given {@link LabelingSegment}.
+ */
 public class MetaSegSegmentFeatureComputation implements Runnable {
 
 	private final MetaSegModel parentModel;
-	private ImgPlus< DoubleType > img;
 	private Map< LabelingSegment, FeaturesRow > featuresTable = new ConcurrentHashMap< LabelingSegment, FeaturesRow >();
 
 	private List< ValuePair< LabelingSegment, Integer > > hypothesesSet;
@@ -26,9 +26,30 @@ public class MetaSegSegmentFeatureComputation implements Runnable {
 
 	public MetaSegSegmentFeatureComputation( final MetaSegModel model, List< ValuePair< LabelingSegment, Integer > > predictionSet ) {
 		parentModel = model;
-		img = model.getRawData();
 		this.hypothesesSet = predictionSet;
 		this.singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( parentModel );
+	}
+
+	public FeatureSelection getFeatureSelection() {
+		return featureSelection;
+	}
+
+	public void setFeatureSelection( FeatureSelection fs ) {
+		this.featureSelection = fs;
+		singleFeatureComputerObject.setFeatureSelection( featureSelection );
+		featuresTable.clear();
+	}
+
+	public FeaturesRow getFeatureRow( ValuePair< LabelingSegment, Integer > valuePair )
+	{
+		FeaturesRow featureRow = featuresTable.get( valuePair.getA() );
+		if(featureRow == null) {
+			MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( parentModel );
+			singleFeatureComputerObject.setFeatureSelection( featureSelection );
+			featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
+			featuresTable.put( valuePair.getA(), featureRow );
+		}
+		return featureRow;
 	}
 
 	@Override
@@ -37,22 +58,9 @@ public class MetaSegSegmentFeatureComputation implements Runnable {
 		taskExecutor.forEach( hypothesesSet, segment -> extractFeaturesFromHypothesis( segment ) );
 	}
 
-	public Map< LabelingSegment, FeaturesRow > getFeaturesTable() {
-		return featuresTable;
-	}
-
 	private void extractFeaturesFromHypothesis( ValuePair< LabelingSegment, Integer > valuePair ) {
 		FeaturesRow featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
 		featuresTable.put( valuePair.getA(), featureRow);
-	}
-
-	public void setFeatureSelection( FeatureSelection fs ) {
-		this.featureSelection = fs;
-		singleFeatureComputerObject.setFeatureSelection( featureSelection );
-	}
-
-	public FeatureSelection getFeatureSelection() {
-		return featureSelection;
 	}
 
 }
