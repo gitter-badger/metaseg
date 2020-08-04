@@ -103,7 +103,6 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private MetaSegSegmentFeatureComputation computeAllFeatures;
 	private List< Runnable > listeners = new CopyOnWriteArrayList< Runnable >();
 
-
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
 		costs = new HashMap<>();
@@ -784,5 +783,4 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	public MetaSegSegmentFeatureComputation getComputeAllFeaturesObject() {
 		return computeAllFeatures;
 	}
-
 }

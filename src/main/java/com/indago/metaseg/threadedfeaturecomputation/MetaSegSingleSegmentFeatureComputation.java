@@ -4,6 +4,8 @@ import org.scijava.plugin.Parameter;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.ui.model.MetaSegModel;
+import com.indago.metaseg.ui.view.FeatureSelection;
+import com.indago.metaseg.ui.view.FeatureType;
 
 import net.imagej.ImgPlus;
 import net.imagej.mesh.Mesh;
@@ -39,6 +41,7 @@ import net.imglib2.view.Views;
 public class MetaSegSingleSegmentFeatureComputation {
 
 	private final MetaSegModel parentModel;
+	private FeatureSelection featureSelection;
 	private DefaultSolidityPolygon polygonSolidityOp;
 	private DefaultSolidityMesh meshSolidityOp;
 	private DefaultConvexityPolygon polygonConvexityOp;
@@ -64,6 +67,7 @@ public class MetaSegSingleSegmentFeatureComputation {
 	public MetaSegSingleSegmentFeatureComputation( final MetaSegModel model ) {
 		parentModel = model;
 		this.is2D = model.is2D();
+		this.featureSelection = new FeatureSelection();
 		img = model.getRawData();
 		model.getContext().inject( this );
 		prematchOps();
@@ -92,43 +96,76 @@ public class MetaSegSingleSegmentFeatureComputation {
 	}
 
 	public FeaturesRow extractFeaturesFromHypothesis( ValuePair< LabelingSegment, Integer > valuePair ) {
-		double area;
-		double perimeter;
-		double convexity;
-		double circularity;
-		double solidity;
-		double boundarySizeConvexHull;
-		double elongation;
-		double normalizedBoundaryPixelSum;
-		double normalizedFacePixelSum;
 		LabelingSegment hypothesis = valuePair.getA();
 		Integer time = valuePair.getB();
+		double area = 0;
+		double perimeter = 0;
+		FeaturesRow featureRow =
+				new FeaturesRow( time );
 		if ( is2D ) {
 			Polygon2D poly = buildPolygoneOp.calculate( hypothesis.getRegion() );
-			area = polygonAreaOp.calculate( poly ).get();
-			perimeter = polygonPerimeterOp.calculate( poly ).get();
-			convexity = polygonConvexityOp.calculate( poly ).get();
-			circularity = polygonCircularityOp.calculate( poly ).get();
-			solidity = polygonSolidityOp.calculate( poly ).get();
-			boundarySizeConvexHull = polygonBoundarySizeConvexHullOp.calculate( poly ).get();
+			if(featureSelection.isSelected( FeatureType.AREA ) || featureSelection.isSelected( FeatureType.NORMALIZED_FACE_PIXEL_SUM )) {
+				area = polygonAreaOp.calculate( poly ).get();
+				featureRow.setValue( FeatureType.AREA, area );
+			}
+			if ( featureSelection.isSelected( FeatureType.PERIMETER ) || featureSelection.isSelected( FeatureType.NORMALIZED_BOUNDARY_PIXEL_SUM ) ) {
+				perimeter = polygonPerimeterOp.calculate( poly ).get();
+				featureRow.setValue( FeatureType.PERIMETER, perimeter );
+			}
+			if ( featureSelection.isSelected( FeatureType.CONVEXITY ) ) {
+				featureRow.setValue( FeatureType.CONVEXITY, polygonConvexityOp.calculate( poly ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.CIRCULARITY ) ) {
+				featureRow.setValue( FeatureType.CIRCULARITY, polygonCircularityOp.calculate( poly ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.SOLIDITY ) ) {
+				featureRow.setValue( FeatureType.SOLIDITY, polygonSolidityOp.calculate( poly ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.BOUNDARY_SIZE_CONVEX_HULL ) ) {
+				featureRow.setValue( FeatureType.BOUNDARY_SIZE_CONVEX_HULL, polygonBoundarySizeConvexHullOp.calculate( poly ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.NORMALIZED_BOUNDARY_PIXEL_SUM ) ) {
+				featureRow.setValue( FeatureType.NORMALIZED_BOUNDARY_PIXEL_SUM, computeBoundaryPixelSum( hypothesis, time ) / perimeter );
+			}
+			if ( featureSelection.isSelected( FeatureType.NORMALIZED_FACE_PIXEL_SUM ) ) {
+				featureRow.setValue( FeatureType.NORMALIZED_FACE_PIXEL_SUM, computeFacePixelSum( hypothesis, time ) / area );
+			}
+			
 //			elongation = polygonElongationOp.calculate( poly ).get();
-			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
-			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
 
 		} else {
 			Mesh mesh = ops.geom().marchingCubes( ( ( RandomAccessibleInterval ) hypothesis.getRegion() ) );
-			area = meshAreaOp.calculate( mesh ).get();
-			perimeter = meshPerimeterOp.calculate( mesh ).get();
-			convexity = meshConvexityOp.calculate( mesh ).get();
-			circularity = meshCircularityOp.calculate( mesh ).get();
-			solidity = meshSolidityOp.calculate( mesh ).get();
-			boundarySizeConvexHull = meshBoundarySizeConvexHullOp.calculate( mesh ).get();
-			elongation = meshElongationOp.calculate( mesh ).get();
-			normalizedBoundaryPixelSum = computeBoundaryPixelSum( hypothesis, time ) / perimeter;
-			normalizedFacePixelSum = computeFacePixelSum( hypothesis, time ) / area;
+
+			if ( featureSelection.isSelected( FeatureType.AREA ) || featureSelection.isSelected( FeatureType.NORMALIZED_FACE_PIXEL_SUM ) ) {
+				area = meshAreaOp.calculate( mesh ).get();
+				featureRow.setValue( FeatureType.AREA, area );
+			}
+			if ( featureSelection.isSelected( FeatureType.PERIMETER ) || featureSelection.isSelected( FeatureType.NORMALIZED_BOUNDARY_PIXEL_SUM ) ) {
+				perimeter = meshPerimeterOp.calculate( mesh ).get();
+				featureRow.setValue( FeatureType.PERIMETER, perimeter );
+			}
+			if ( featureSelection.isSelected( FeatureType.CONVEXITY ) ) {
+				featureRow.setValue( FeatureType.CONVEXITY, meshConvexityOp.calculate( mesh ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.CIRCULARITY ) ) {
+				featureRow.setValue( FeatureType.CIRCULARITY, meshCircularityOp.calculate( mesh ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.SOLIDITY ) ) {
+				featureRow.setValue( FeatureType.SOLIDITY, meshSolidityOp.calculate( mesh ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.BOUNDARY_SIZE_CONVEX_HULL ) ) {
+				featureRow.setValue( FeatureType.BOUNDARY_SIZE_CONVEX_HULL, meshBoundarySizeConvexHullOp.calculate( mesh ).get() );
+			}
+			if ( featureSelection.isSelected( FeatureType.NORMALIZED_BOUNDARY_PIXEL_SUM ) ) {
+				featureRow.setValue( FeatureType.NORMALIZED_BOUNDARY_PIXEL_SUM, computeBoundaryPixelSum( hypothesis, time ) / perimeter );
+			}
+			if ( featureSelection.isSelected( FeatureType.NORMALIZED_FACE_PIXEL_SUM ) ) {
+				featureRow.setValue( FeatureType.NORMALIZED_FACE_PIXEL_SUM, computeFacePixelSum( hypothesis, time ) / area );
+			}
+
+//			elongation = meshElongationOp.calculate( mesh ).get();
+
 		}
-		FeaturesRow featureRow =
-				new FeaturesRow( time, area, perimeter, convexity, circularity, solidity, boundarySizeConvexHull, normalizedBoundaryPixelSum, normalizedFacePixelSum );
 
 		return featureRow;
 	}
@@ -174,5 +211,9 @@ public class MetaSegSingleSegmentFeatureComputation {
 			retSlice = Views.interval( img, mininterval, maxinterval );
 		}
 		return retSlice;
+	}
+
+	public void setFeatureSelection( FeatureSelection featureSelection2 ) {
+		this.featureSelection = featureSelection2;
 	}
 }

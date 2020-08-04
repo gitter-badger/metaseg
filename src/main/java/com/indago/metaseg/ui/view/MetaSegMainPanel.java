@@ -57,6 +57,7 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 
 	private final LoggingPanel logPanel;
 
+	private FeatureSelectionMenu featureSelectionMenu;
 
 	public MetaSegMainPanel( final Frame frame, final MetaSegModel model ) {
 		super( new BorderLayout( 5, 5 ) );
@@ -128,6 +129,9 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		splitPane.setOneTouchExpandable( true );
 
 		this.add( splitPane, BorderLayout.CENTER );
+
+		featureSelectionMenu = new FeatureSelectionMenu( model );
+		frame.setMenuBar( featureSelectionMenu.createMenuBar() );
 	}
 
 	/**
@@ -211,5 +215,8 @@ public class MetaSegMainPanel extends JPanel implements ActionListener, ChangeLi
 		return tabTraining;
 	}
 
+	public FeatureSelectionMenu getFeatureSelectionMenu() {
+		return featureSelectionMenu;
+	}
 
 }

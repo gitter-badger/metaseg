@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.metaseg.ui.model.MetaSegModel;
+import com.indago.metaseg.ui.view.FeatureSelection;
 
 import net.imagej.ImgPlus;
 import net.imglib2.parallel.TaskExecutor;
@@ -21,6 +22,7 @@ public class MetaSegSegmentFeatureComputation implements Runnable {
 
 	private List< ValuePair< LabelingSegment, Integer > > hypothesesSet;
 	private final MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject;
+	private FeatureSelection featureSelection = new FeatureSelection();
 
 	public MetaSegSegmentFeatureComputation( final MetaSegModel model, List< ValuePair< LabelingSegment, Integer > > predictionSet ) {
 		parentModel = model;
@@ -42,6 +44,15 @@ public class MetaSegSegmentFeatureComputation implements Runnable {
 	private void extractFeaturesFromHypothesis( ValuePair< LabelingSegment, Integer > valuePair ) {
 		FeaturesRow featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
 		featuresTable.put( valuePair.getA(), featureRow);
+	}
+
+	public void setFeatureSelection( FeatureSelection fs ) {
+		this.featureSelection = fs;
+		singleFeatureComputerObject.setFeatureSelection( featureSelection );
+	}
+
+	public FeatureSelection getFeatureSelection() {
+		return featureSelection;
 	}
 
 }

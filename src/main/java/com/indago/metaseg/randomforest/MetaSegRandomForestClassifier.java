@@ -11,6 +11,8 @@ import com.indago.metaseg.threadedfeaturecomputation.MetaSegSegmentFeatureComput
 import com.indago.metaseg.threadedfeaturecomputation.MetaSegSingleSegmentFeatureComputation;
 import com.indago.metaseg.ui.model.MetaSegModel;
 import com.indago.metaseg.ui.util.ClassifierLoaderAndSaver;
+import com.indago.metaseg.ui.view.FeatureSelection;
+import com.indago.metaseg.ui.view.FeatureType;
 
 import hr.irb.fastRandomForest.FastRandomForest;
 import net.imglib2.util.ValuePair;
@@ -29,17 +31,12 @@ public class MetaSegRandomForestClassifier {
 	private Instances trainingData;
 	private FastRandomForest forest;
 	
-	private static Instances newTable() {
+	private Instances newTable() {
 		ArrayList< Attribute > attInfo = new ArrayList<>();
-		attInfo.add( new Attribute( "area" ) );
-		attInfo.add( new Attribute( "perimeter" ) );
-		attInfo.add( new Attribute( "convexity" ) );
-		attInfo.add( new Attribute( "circularity" ) );
-		attInfo.add( new Attribute( "solidity" ) );
-		attInfo.add( new Attribute( "boundarysizeconvexhull" ) );
-//		attInfo.add( new Attribute( "elongation" ) );
-		attInfo.add( new Attribute( "boundarypixelsum" ) );
-		attInfo.add( new Attribute( "facepixelsum" ) );
+		FeatureSelection featureSelection = model.getCostTrainerModel().getComputeAllFeaturesObject().getFeatureSelection();
+		for ( FeatureType feature : featureSelection.getSelectedFeatures() ) {
+			attInfo.add( new Attribute( feature.getName() ) );
+		}
 		attInfo.add( new Attribute( "class", Arrays.asList( "bad", "good" ) ) );
 		Instances table = new Instances( "foo bar", attInfo, 1 );
 		table.setClassIndex( table.numAttributes() - 1 );
@@ -50,6 +47,7 @@ public class MetaSegRandomForestClassifier {
 	public void initializeTrainingData(
 			List< ValuePair< LabelingSegment, Integer > > goodHypotheses,
 			List< ValuePair< LabelingSegment, Integer > > badHypotheses ) {
+
 		trainingData = newTable();
 		double relative_weight_bad = ( double ) goodHypotheses.size() / badHypotheses.size(); //Use when not using crossvalidation(CV), CV does stratified sampling already
 //		double relative_weight_bad = 1;
@@ -85,23 +83,23 @@ public class MetaSegRandomForestClassifier {
 	private DenseInstance getPrecomputedHypothesisFeatures( ValuePair< LabelingSegment, Integer > valuePair, double weight, int category ) {
 
 		MetaSegSegmentFeatureComputation computeAllFeaturesObject = model.getCostTrainerModel().getComputeAllFeaturesObject();
+		FeatureSelection featureSelection = computeAllFeaturesObject.getFeatureSelection();
 		Map< LabelingSegment, FeaturesRow > featuresTable = computeAllFeaturesObject.getFeaturesTable();
-		FeaturesRow segmentFeatures = featuresTable.get( valuePair.getA() );
-		if(segmentFeatures == null) {
+		FeaturesRow featureRow = featuresTable.get( valuePair.getA() );
+		if(featureRow == null) {
 			MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( model );
-			segmentFeatures = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
-			featuresTable.put( valuePair.getA(), segmentFeatures );
+			singleFeatureComputerObject.setFeatureSelection( featureSelection );
+			featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
+			featuresTable.put( valuePair.getA(), featureRow );
 		}
-		DenseInstance ins = new DenseInstance( weight, new double[] { segmentFeatures.getArea(),
-		                                                              segmentFeatures.getPerimeter(),
-		                                                              segmentFeatures.getConvexity(),
-		                                                              segmentFeatures.getCircularity(),
-		                                                              segmentFeatures.getSolidity(),
-		                                                              segmentFeatures.getBoundarysizeconvexhull(),
-//																	  segmentFeatures.getElongation(),
-		                                                              segmentFeatures.getNormalizedBoundaryPixelSum(),
-		                                                              segmentFeatures.getNormalizedFacePixelSum(),
-																	  category } );
+		double[] values = new double[ featureSelection.numberOfSelectedFeatures() + 1 ];
+		int i = 0;
+		for ( FeatureType featureType : featureSelection.getSelectedFeatures() ) {
+			values[ i ] = featureRow.getValue( featureType );
+			i++;
+		}
+		values[ i ] = category;
+		DenseInstance ins = new DenseInstance( weight, values );
 		return ins;
 	}
 
@@ -122,5 +120,4 @@ public class MetaSegRandomForestClassifier {
 	public boolean isRandomForestExists() {
 		return (!(forest==null) ? true : false);
 	}
-
 }
