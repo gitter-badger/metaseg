@@ -15,52 +15,58 @@ import net.imglib2.util.ValuePair;
 /**
  * Calculates the {@link FeaturesRow} for a given {@link LabelingSegment}.
  */
-public class MetaSegSegmentFeatureComputation implements Runnable {
+public class MetaSegSegmentFeatureComputation {
 
 	private final MetaSegModel parentModel;
-	private Map< LabelingSegment, FeaturesRow > featuresTable = new ConcurrentHashMap< LabelingSegment, FeaturesRow >();
+	private final Map< LabelingSegment, FeaturesRow > featuresTable = new ConcurrentHashMap<>();
+	private final List< ValuePair< LabelingSegment, Integer > > hypothesesSet;
+	private final ThreadLocal< MetaSegSingleSegmentFeatureComputation > featureComputers;
+	private final FeatureSelection featureSelection;
+	private boolean cancel = false;
 
-	private List< ValuePair< LabelingSegment, Integer > > hypothesesSet;
-	private final MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject;
-	private FeatureSelection featureSelection = new FeatureSelection();
-
-	public MetaSegSegmentFeatureComputation( final MetaSegModel model, List< ValuePair< LabelingSegment, Integer > > predictionSet ) {
-		parentModel = model;
+	public MetaSegSegmentFeatureComputation( final MetaSegModel model, List< ValuePair< LabelingSegment, Integer > > predictionSet,
+			FeatureSelection featureSelection) {
+		this.parentModel = model;
+		this.featureSelection = featureSelection;
 		this.hypothesesSet = predictionSet;
-		this.singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( parentModel );
-	}
-
-	public FeatureSelection getFeatureSelection() {
-		return featureSelection;
-	}
-
-	public void setFeatureSelection( FeatureSelection fs ) {
-		this.featureSelection = fs;
-		singleFeatureComputerObject.setFeatureSelection( featureSelection );
-		featuresTable.clear();
+		this.featureComputers = ThreadLocal.withInitial(() -> new MetaSegSingleSegmentFeatureComputation(parentModel, featureSelection));
 	}
 
 	public FeaturesRow getFeatureRow( ValuePair< LabelingSegment, Integer > valuePair )
 	{
 		FeaturesRow featureRow = featuresTable.get( valuePair.getA() );
 		if(featureRow == null) {
-			MetaSegSingleSegmentFeatureComputation singleFeatureComputerObject = new MetaSegSingleSegmentFeatureComputation( parentModel );
-			singleFeatureComputerObject.setFeatureSelection( featureSelection );
-			featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
-			featuresTable.put( valuePair.getA(), featureRow );
+			extractFeaturesFromHypothesis(valuePair);
 		}
-		return featureRow;
+		return featuresTable.get( valuePair.getA() );
 	}
 
-	@Override
-	public final void run() {
-		TaskExecutor taskExecutor = TaskExecutors.fixedThreadPool( Runtime.getRuntime().availableProcessors() );
-		taskExecutor.forEach( hypothesesSet, segment -> extractFeaturesFromHypothesis( segment ) );
+	public void computeAllFeatureInBackground(Runnable completionCallback) {
+		Thread featureComputerThread = new Thread( () -> {
+			TaskExecutor taskExecutor = TaskExecutors.fixedThreadPool( Runtime.getRuntime().availableProcessors() );
+			taskExecutor.forEach( hypothesesSet, segment -> {
+				if(cancel)
+					return;
+				extractFeaturesFromHypothesis( segment );
+			} );
+			if(cancel)
+				return;
+			completionCallback.run();
+		} );
+		featureComputerThread.setPriority( Thread.MIN_PRIORITY );
+		featureComputerThread.start();
 	}
 
 	private void extractFeaturesFromHypothesis( ValuePair< LabelingSegment, Integer > valuePair ) {
-		FeaturesRow featureRow = singleFeatureComputerObject.extractFeaturesFromHypothesis( valuePair );
+		FeaturesRow featureRow = featureComputers.get().extractFeaturesFromHypothesis( valuePair );
 		featuresTable.put( valuePair.getA(), featureRow);
 	}
 
+	public FeatureSelection getFeatureSelection() {
+		return featureSelection;
+	}
+
+	public void cancel() {
+		this.cancel = true;
+	}
 }

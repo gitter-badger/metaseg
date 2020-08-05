@@ -41,7 +41,7 @@ import net.imglib2.view.Views;
 public class MetaSegSingleSegmentFeatureComputation {
 
 	private final MetaSegModel parentModel;
-	private FeatureSelection featureSelection;
+	private final FeatureSelection featureSelection;
 	private DefaultSolidityPolygon polygonSolidityOp;
 	private DefaultSolidityMesh meshSolidityOp;
 	private DefaultConvexityPolygon polygonConvexityOp;
@@ -64,10 +64,10 @@ public class MetaSegSingleSegmentFeatureComputation {
 
 	private final boolean is2D;
 
-	public MetaSegSingleSegmentFeatureComputation( final MetaSegModel model ) {
+	public MetaSegSingleSegmentFeatureComputation(final MetaSegModel model, final FeatureSelection featureSelection) {
 		parentModel = model;
 		this.is2D = model.is2D();
-		this.featureSelection = new FeatureSelection();
+		this.featureSelection = featureSelection;
 		img = model.getRawData();
 		model.getContext().inject( this );
 		prematchOps();
@@ -211,9 +211,5 @@ public class MetaSegSingleSegmentFeatureComputation {
 			retSlice = Views.interval( img, mininterval, maxinterval );
 		}
 		return retSlice;
-	}
-
-	public void setFeatureSelection( FeatureSelection featureSelection2 ) {
-		this.featureSelection = featureSelection2;
 	}
 }

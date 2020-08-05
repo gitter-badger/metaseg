@@ -52,7 +52,7 @@ public class FeatureSelectionMenu implements ActionListener, ItemListener {
 		if ( jmi.getLabel() == "(Un)Select features" ) {
 			FeatureSelection fs = featureSelectionPanel.show();
 			if ( fs != null )
-				model.getCostTrainerModel().getComputeAllFeaturesObject().setFeatureSelection( fs );
+				model.getCostTrainerModel().setFeatureSelection(fs);
 		}
 
 	}

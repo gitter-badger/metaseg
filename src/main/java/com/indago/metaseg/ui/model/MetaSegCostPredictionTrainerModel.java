@@ -37,6 +37,7 @@ import com.indago.metaseg.io.projectfolder.MetasegProjectFolder;
 import com.indago.metaseg.randomforest.MetaSegRandomForestClassifier;
 import com.indago.metaseg.threadedfeaturecomputation.MetaSegSegmentFeatureComputation;
 import com.indago.metaseg.ui.util.Utils;
+import com.indago.metaseg.ui.view.FeatureSelection;
 import com.indago.ui.bdv.BdvOwner;
 import com.indago.util.ImglibUtil;
 
@@ -102,6 +103,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	private AffineTransform3D transform;
 	private MetaSegSegmentFeatureComputation computeAllFeatures;
 	private List< Runnable > listeners = new CopyOnWriteArrayList< Runnable >();
+	private FeatureSelection featureSelection = new FeatureSelection();
 
 	public MetaSegCostPredictionTrainerModel( final MetaSegModel metaSegModel ) {
 		parentModel = metaSegModel;
@@ -770,14 +772,25 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return fetchedSegmentsPresent;
 	}
 
-	public void computeAllFeatures() throws InterruptedException {
-		computeAllFeatures = new MetaSegSegmentFeatureComputation( parentModel, allSegsWithTime );
-		Thread featureComputerThread = new Thread( () -> {
-			computeAllFeatures.run();
-			notifyCompletionListeners();
-		} );
-		featureComputerThread.setPriority( Thread.MIN_PRIORITY );
-		featureComputerThread.start();
+	public void computeAllFeatures() {
+		updateComputeAllFeaturesObject();
+		computeAllFeatures.computeAllFeatureInBackground(this::notifyCompletionListeners);
+	}
+
+	public void setFeatureSelection(FeatureSelection featureSelection) {
+		this.featureSelection = featureSelection;
+		updateComputeAllFeaturesObject();
+	}
+
+	public void updateComputeAllFeaturesObject()
+	{
+		if(computeAllFeatures != null)
+			computeAllFeatures.cancel();
+		computeAllFeatures = new MetaSegSegmentFeatureComputation( parentModel, allSegsWithTime, featureSelection );
+	}
+
+	public FeatureSelection getFeatureSelection() {
+		return featureSelection;
 	}
 
 	public MetaSegSegmentFeatureComputation getComputeAllFeaturesObject() {
