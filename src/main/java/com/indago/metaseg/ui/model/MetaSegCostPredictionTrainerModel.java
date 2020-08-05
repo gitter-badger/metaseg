@@ -320,9 +320,7 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 	}
 
 	public void randomizeSegmentsAndPrepData() {
-		List< ValuePair< LabelingSegment, Integer > > temp = new ArrayList<>( allSegsWithTime );
-		List< ValuePair< LabelingSegment, Integer > > randomizedSegsWIthTime = getAllSegmentsRandomized( temp );
-		predictionSet = new ArrayList<>( randomizedSegsWIthTime );
+		predictionSet = copyAndRandomizeList(allSegsWithTime);
 		goodHypotheses = new ArrayList< ValuePair< LabelingSegment, Integer > >();
 		badHypotheses = new ArrayList< ValuePair< LabelingSegment, Integer > >();
 	}
@@ -338,11 +336,11 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		return allSegsWithIdAndTime;
 	}
 
-	private List< ValuePair< LabelingSegment, Integer > > getAllSegmentsRandomized(
-			List< ValuePair< LabelingSegment, Integer > > temp ) {
-		List< ValuePair< LabelingSegment, Integer > > randomizedSegsWIthTime = new ArrayList<>( temp );
-		Collections.shuffle( randomizedSegsWIthTime );
-		return randomizedSegsWIthTime;
+	private static <T> List< T > copyAndRandomizeList(List< T > in)
+	{
+		List< T > copy = new ArrayList<>(in);
+		Collections.shuffle(copy);
+		return copy;
 	}
 
 	public void selectSegmentForDisplay() throws Exception { //safeguard against size of pred set = 0 needs checking
