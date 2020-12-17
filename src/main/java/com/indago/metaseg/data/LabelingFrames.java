@@ -3,13 +3,14 @@
  */
 package com.indago.metaseg.data;
 
-import com.indago.data.segmentation.groundtruth.FlatForest;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.indago.data.segmentation.ConflictGraph;
 import com.indago.data.segmentation.LabelingBuilder;
@@ -17,22 +18,19 @@ import com.indago.data.segmentation.LabelingPlus;
 import com.indago.data.segmentation.LabelingSegment;
 import com.indago.data.segmentation.MinimalOverlapConflictGraph;
 import com.indago.data.segmentation.XmlIoLabelingPlus;
-import com.indago.data.segmentation.filteredcomponents.FilteredComponentTree;
 import com.indago.data.segmentation.filteredcomponents.FilteredComponentTree.Filter;
 import com.indago.data.segmentation.filteredcomponents.FilteredComponentTree.MaxGrowthPerStep;
+import com.indago.data.segmentation.groundtruth.FlatForest;
 import com.indago.io.ProjectFile;
 import com.indago.io.ProjectFolder;
 import com.indago.metaseg.MetaSegLog;
 import com.indago.metaseg.ui.model.MetaSegSegmentationCollectionModel;
 
 import indago.ui.progress.ProgressListener;
-import java.util.Set;
-import java.util.stream.Collectors;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import weka.gui.ExtensionFileFilter;
 
