@@ -293,10 +293,15 @@ public class MetaSegCostPredictionTrainerPanel extends JPanel implements ActionL
 	}
 
 	private void actionFetch() {
+		boolean exists = model.loadIfSegmentsExist();
+		if ( exists ) {
+			MetaSegLog.log.info( "Loading labeling frames from existing directory!" );
+		} else {
+			model.purgeSegmentationData();
+			processSegmentationInputs();
+			MetaSegLog.log.info( "Segmentation results fetched!" );
+		}
 
-		model.purgeSegmentationData();
-		processSegmentationInputs();
-		MetaSegLog.log.info( "Segmentation results fetched!" );
 	}
 
 	@Override

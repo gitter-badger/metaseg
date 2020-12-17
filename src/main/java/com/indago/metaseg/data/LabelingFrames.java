@@ -6,6 +6,8 @@ package com.indago.metaseg.data;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -164,21 +166,38 @@ public class LabelingFrames {
 		return mapToConflictGraphs.get( key );
 	}
 
-	public void loadFromProjectFolder( final ProjectFolder folder ) {
+	public boolean loadFromProjectFolder( final ProjectFolder folder ) {
 		frameLabelingBuilders.clear();
 		processedOrLoaded = false;
-		for ( final ProjectFile labelingFrameFile : folder.getFiles( new ExtensionFileFilter( "xml", "XML files" ) ) ) {
-			final File fLabeling = labelingFrameFile.getFile();
-			if ( fLabeling.canRead() ) {
-				try {
-					final LabelingPlus labelingPlus = new XmlIoLabelingPlus().load( fLabeling );
-					frameLabelingBuilders.add( new LabelingBuilder( labelingPlus ) );
-				} catch ( final IOException e ) {
-					MetaSegLog.segmenterLog.error( String.format( "Labeling could not be loaded! (%s)", fLabeling.toString() ) );
-				}
-			}
-			processedOrLoaded = true;
+		boolean xml_available = false;
+		boolean bson_available = false;
+		ExtensionFileFilter extensionFilter = null;
+		Collection< ProjectFile > xml_files = folder.getFiles( new ExtensionFileFilter( "xml", "XML files" ) );
+		Collection< ProjectFile > bson_files = folder.getFiles( new ExtensionFileFilter( "bson", "BSON files" ) );
+
+		if ( xml_files.isEmpty() && bson_files.isEmpty() ) {
+			System.out.println( "Labeling frames unavailable!" );
+		} else if ( xml_files.isEmpty() == false && bson_files.isEmpty() == true ) {
+			xml_available = true;
+		} else if ( xml_files.isEmpty() == true && bson_files.isEmpty() == false ) {
+			bson_available = true;
+		} else if ( xml_files.isEmpty() == false && bson_files.isEmpty() == false ) {
+			xml_available = true;
+			bson_available = true;
 		}
+		
+		Collection< ProjectFile > files = xml_available ? xml_files : ( bson_available ? bson_files : Collections.EMPTY_LIST );
+		if ( files.isEmpty() ) { return processedOrLoaded; }
+		for ( final ProjectFile labelingFrameFile : files ) {
+
+				final File fLabeling = labelingFrameFile.getFile();
+				if ( fLabeling.canRead() ) {
+					final LabelingPlus labelingPlus = new XmlIoLabelingPlus().loadFromBson( fLabeling.getAbsolutePath() );
+					frameLabelingBuilders.add( new LabelingBuilder( labelingPlus ) );
+				}
+				processedOrLoaded = true;
+			}
+		return processedOrLoaded;
 	}
 
 	public boolean needProcessing() {

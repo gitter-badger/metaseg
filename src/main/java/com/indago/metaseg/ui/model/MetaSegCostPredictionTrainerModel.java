@@ -651,15 +651,13 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	private void loadStoredLabelingFramesAndSegmentCosts() {
 		// Loading hypotheses labeling frames if exist in project folder
-		try {
-			hypothesesFolder = dataFolder.addFolder( FOLDER_LABELING_FRAMES );
-			hypothesesFolder.loadFiles();
-			labelingFrames.loadFromProjectFolder( hypothesesFolder );
+		loadLabelingFramesIfExists();
+		loadCostsIfExists();
 
-		} catch ( final IOException ioe ) {
-			ioe.printStackTrace();
-		}
+	}
 
+
+	private void loadCostsIfExists() {
 		// Loading stored PGraph if exists in project folder
 		final ProjectFile pgFile = parentModel.getProjectFolder().getFile( FILENAME_PGRAPH );
 		if ( pgFile.exists() && pgFile.canRead() ) {
@@ -668,7 +666,20 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		} else {
 			savedCostsLoaded = false; //TODO Throw warning that costs are missing.
 		}
+	}
 
+
+	private boolean loadLabelingFramesIfExists() {
+		boolean exists = false;
+		try {
+			hypothesesFolder = dataFolder.addFolder( FOLDER_LABELING_FRAMES );
+			hypothesesFolder.loadFiles();
+			exists = labelingFrames.loadFromProjectFolder( hypothesesFolder );
+
+		} catch ( final IOException ioe ) {
+			ioe.printStackTrace();
+		}
+		return exists;
 	}
 
 	private void populateSegmentCostsFromStoredProblemGraphFile( ProjectFile pgFile ) {
@@ -793,5 +804,18 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 
 	public MetaSegSegmentFeatureComputation getComputeAllFeaturesObject() {
 		return computeAllFeatures;
+	}
+
+	public boolean loadIfSegmentsExist() {
+		boolean exists = false;
+		if ( dataFolder.getFolder( FOLDER_LABELING_FRAMES ).exists() ) {
+			exists = loadLabelingFramesIfExists();
+			if ( exists ) {
+				MetaSegLog.log.info( "Labeling frames exist already, loading them from folder" );
+			}
+		}else {
+			MetaSegLog.log.info( "Labeling frames do not exist, checking if segmentation images exist" );
+		}
+		return exists;
 	}
 }
