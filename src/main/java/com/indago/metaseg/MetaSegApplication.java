@@ -15,6 +15,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.WindowConstants;
 
+import net.imglib2.roi.io.labeling.LabelingIOService;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -111,7 +112,7 @@ public class MetaSegApplication {
 				ImgUtilityService.class, StatusService.class, TranslatorService.class, QTJavaService.class,
 				TiffService.class, CodecService.class, JAIIIOService.class, LogService.class,
 				IndagoSegmentationPluginService.class, PlaneConverterService.class, InitializeService.class,
-				XMLService.class, FilePatternService.class, WidgetService.class);
+				XMLService.class, FilePatternService.class, WidgetService.class, LabelingIOService.class);
 		ops = context.getService( OpService.class );
 		segPlugins = context.getService( IndagoSegmentationPluginService.class );
 		log = context.getService( LogService.class );

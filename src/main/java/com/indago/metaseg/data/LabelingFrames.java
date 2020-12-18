@@ -30,10 +30,12 @@ import com.indago.metaseg.ui.model.MetaSegSegmentationCollectionModel;
 
 import indago.ui.progress.ProgressListener;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.roi.io.labeling.LabelingIOService;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
+import org.scijava.Context;
 import weka.gui.ExtensionFileFilter;
 
 /**
@@ -171,10 +173,10 @@ public class LabelingFrames {
 		processedOrLoaded = false;
 		boolean xml_available = false;
 		boolean bson_available = false;
-		ExtensionFileFilter extensionFilter = null;
 		Collection< ProjectFile > xml_files = folder.getFiles( new ExtensionFileFilter( "xml", "XML files" ) );
 		Collection< ProjectFile > bson_files = folder.getFiles( new ExtensionFileFilter( "bson", "BSON files" ) );
-
+		xml_files = xml_files.stream().filter(file -> !file.getFile().isDirectory()).collect(Collectors.toList());
+		bson_files = bson_files.stream().filter(file -> !file.getFile().isDirectory()).collect(Collectors.toList());
 		if ( xml_files.isEmpty() && bson_files.isEmpty() ) {
 			System.out.println( "Labeling frames unavailable!" );
 		} else if ( xml_files.isEmpty() == false && bson_files.isEmpty() == true ) {
@@ -185,14 +187,16 @@ public class LabelingFrames {
 			xml_available = true;
 			bson_available = true;
 		}
-		
+
 		Collection< ProjectFile > files = xml_available ? xml_files : ( bson_available ? bson_files : Collections.EMPTY_LIST );
 		if ( files.isEmpty() ) { return processedOrLoaded; }
 		for ( final ProjectFile labelingFrameFile : files ) {
 
 				final File fLabeling = labelingFrameFile.getFile();
-				if ( fLabeling.canRead() ) {
-					final LabelingPlus labelingPlus = new XmlIoLabelingPlus().loadFromBson( fLabeling.getAbsolutePath() );
+				if ( fLabeling.canRead()) {
+					XmlIoLabelingPlus xmlIoLabelingPlus = new XmlIoLabelingPlus();
+					xmlIoLabelingPlus.labelingIOService = new Context().getService(LabelingIOService.class);
+					final LabelingPlus labelingPlus = xmlIoLabelingPlus.loadFromBson( fLabeling.getAbsolutePath() );
 					frameLabelingBuilders.add( new LabelingBuilder( labelingPlus ) );
 				}
 				processedOrLoaded = true;
