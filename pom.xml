@@ -90,6 +90,7 @@
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-roi-io</artifactId>
+			<version>${imglib2-roi-io.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
