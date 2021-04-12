@@ -392,14 +392,14 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		showSeg( chosenSegWithTime );
 	}
 
-	private void showSeg( ValuePair< LabelingSegment, Integer > chosenSegWIthTime ) {
+	private void showSeg( ValuePair< LabelingSegment, Integer > chosenSegWithTime ) {
 		int maxVal = 2;
 		bdvRemoveAll();
 		bdvAdd( parentModel.getRawData(), "RAW", min.get(), max.get(), new ARGBType( 0xFFFFFF ), true );
 		final int c = 1;
 		final RandomAccessibleInterval< IntType > hypothesisImage = DataMover.createEmptyArrayImgLike( parentModel.getRawData(), new IntType() );
-		LabelingSegment segment = chosenSegWIthTime.getA();
-		int time = chosenSegWIthTime.getB();
+		LabelingSegment segment = chosenSegWithTime.getA();
+		int time = chosenSegWithTime.getB();
 		paintSegmentToDisplayDuringManualClassification( c, hypothesisImage, segment, time );
 		bdvHandlePanel.getViewerPanel().setTimepoint( time );
 		setZSlice( segment ); //only for 3d
@@ -495,6 +495,28 @@ public class MetaSegCostPredictionTrainerModel implements CostFactory< LabelingS
 		ValuePair< LabelingSegment, Integer > hypothesis = new ValuePair< LabelingSegment, Integer >( null, null );
 		do {
 			if(id<potentIds.length-1) {
+				hypothesis = predictionSet.get( potentIds[ id ] );
+				prob = computeIntermediateProbability( hypothesis );
+				id = id + 1;
+			} else { //break the loop if id exhausts and then show a random segment
+				MetaSegLog.log.info( "Segment for class balance not found, falling back to random mode for this iteration..." );
+				displaySelectedSegment( predictionSet.get( 0 ) );
+				break;
+			}
+		}
+		while ( !( prob > uncertaintyLB && prob < uncertaintyUB ) );
+		return hypothesis;
+	}
+
+	private ValuePair< LabelingSegment, Integer > pickDiverseUncertianSegmentIteratively( double uncertaintyLB, double uncertaintyUB )
+			throws Exception { //safeguard against size of pred set = 0 needs checking
+		int[] potentIds = Utils.uniqueRand( ( int ) ( 0.1 * predictionSet.size() ), predictionSet.size() );
+		int id = 0;
+		double prob;
+
+		ValuePair< LabelingSegment, Integer > hypothesis = new ValuePair< LabelingSegment, Integer >( null, null );
+		do {
+			if ( id < potentIds.length - 1 ) {
 				hypothesis = predictionSet.get( potentIds[ id ] );
 				prob = computeIntermediateProbability( hypothesis );
 				id = id + 1;
