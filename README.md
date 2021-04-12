@@ -1,4 +1,4 @@
-[![](https://travis-ci.com/TrNdy/metaseg.svg?branch=master)](https://travis-ci.com/TrNdy/metaseg)
+[![](https://travis-ci.com/TrNdy/metaseg.svg?branch=master)](https://travis-ci.com/TrNdy/metaseg) [![Join the chat at https://gitter.im/juglab/metaseg](https://badges.gitter.im/juglab/metaseg.svg)](https://gitter.im/juglab/metaseg?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # metaseg
 
